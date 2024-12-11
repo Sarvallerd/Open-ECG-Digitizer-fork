@@ -1,0 +1,211 @@
+from ray.tune.analysis.experiment_analysis import ExperimentAnalysis
+from src.config.default import get_cfg, merge_cfg
+from src.utils import load_model, get_data_loaders, import_class_from_path
+from tqdm import tqdm
+from ray.train import Checkpoint
+from typing import Any, Tuple, Optional, Dict, List
+from torch import nn
+from functools import partial
+from yacs.config import CfgNode as CN
+import numpy as np
+import ray
+import tempfile
+import torch
+import os
+
+
+def run_epoch(
+    model: nn.Module,
+    criterion: nn.Module,
+    dataloader: torch.utils.data.DataLoader[Any],
+    optimizer: Optional[torch.optim.Optimizer] = None,
+    eval: bool = False,
+    epoch: Optional[int] = None,
+    max_epochs: Optional[int] = None,
+    device: str | torch.device = "cpu",
+) -> Tuple[float, int, List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]:
+    if not eval and optimizer is None:
+        raise ValueError("Optimizer must be provided for training (eval=False).")
+
+    if not isinstance(device, torch.device):
+        device = torch.device(device)
+
+    if eval:
+        model.eval()
+    else:
+        model.train()
+
+    total_loss = 0.0
+    num_cases = 0
+    predictions = []
+    embeddings = []
+    targets = []
+    progress_bar = tqdm(dataloader)
+
+    for predictors, target in progress_bar:
+        with torch.set_grad_enabled(not eval):
+            if optimizer:
+                optimizer.zero_grad()
+            predictors = predictors.to(device)
+            target = target.to(device)
+            output = model(predictors)
+            predictions.append(output.detach().cpu().numpy())
+            targets.append(target.detach().cpu().numpy())
+
+            with torch.no_grad():
+                if hasattr(model, "extract_embeddings"):
+                    embeddings.append(model.extract_embeddings(predictors))
+
+            loss = criterion(output, target)
+
+            if not eval:
+                loss.backward()
+                optimizer.step()  # type: ignore
+
+            total_loss += loss.item()
+            num_cases += predictors.shape[0]
+
+            if epoch:
+                max_epochs_str = f"/{max_epochs}" if max_epochs else ""
+                progress_bar.set_description(f"Epoch {epoch + 1}{max_epochs_str}, Loss: {total_loss / num_cases:.4f}")
+    return total_loss, num_cases, predictors, embeddings, predictions, targets
+
+
+def train(
+    model: nn.Module,
+    criterion: nn.Module,
+    train_dataloader: torch.utils.data.DataLoader[Any],
+    val_dataloader: torch.utils.data.DataLoader[Any],
+    optimizer: torch.optim.Optimizer,
+    use_ray: bool,
+    epochs: int,
+    metrics: Dict[Any, Any],
+    device: str | torch.device = "cpu",
+) -> None:
+    if not isinstance(device, torch.device):
+        device = torch.device(device)
+
+    print(f"Training model:\n {model}")
+    print(f"Trainable model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+    model.to(device)
+
+    running_train_losses = []
+    running_val_losses = []
+    num_epochs = epochs
+
+    metrics_instances = []
+
+    for metric in metrics:
+        if metric.get("fit", False):
+            metric_class = import_class_from_path(metric["class_path"])()
+            metric_class.fit(train_dataloader.dataset.data)  # type: ignore
+        else:
+            metric_class = import_class_from_path(metric["class_path"])
+        metrics_instances.append(metric_class)
+
+    best_metrics = {metric.__name__: -np.inf for metric in metrics_instances}
+    lowest_val_loss = np.inf
+
+    for epoch in range(num_epochs):
+        train_loss, train_cases, _, _, train_predictions, train_targets = run_epoch(
+            model, criterion, train_dataloader, optimizer, eval=False, epoch=epoch, max_epochs=num_epochs, device=device
+        )
+        running_train_losses.append(train_loss / train_cases)
+
+        val_loss, val_cases, _, _, val_predictions, val_targets = run_epoch(
+            model, criterion, val_dataloader, optimizer, eval=False, epoch=epoch, max_epochs=num_epochs, device=device
+        )
+
+        running_val_losses.append(val_loss / val_cases)
+
+        calculated_metrics = {}
+        curr_val_loss = val_loss / val_cases
+        is_new_best_metric = curr_val_loss < lowest_val_loss
+        lowest_val_loss = min(curr_val_loss, lowest_val_loss)
+
+        for metric in metrics_instances:
+            name = metric.__name__
+            train_metric = metric(train_targets, train_predictions)
+            val_metric = metric(val_targets, val_predictions)
+            calculated_metrics[f"train_{name}"] = train_metric
+            calculated_metrics[f"val_{name}"] = val_metric
+            if val_metric > best_metrics[name]:
+                best_metrics[name] = val_metric
+                is_new_best_metric = True
+
+        results = {"train_loss": train_loss / train_cases, "val_loss": curr_val_loss} | calculated_metrics
+        if not use_ray:
+            print(f"Epoch {epoch}/{num_epochs}: {results}")
+        elif is_new_best_metric:
+            with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
+                path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
+                torch.save((model.state_dict(), optimizer.state_dict()), path)
+                checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
+                ray.train.report(
+                    {"train_loss": train_loss / train_cases, "val_loss": curr_val_loss} | calculated_metrics,
+                    checkpoint=checkpoint,
+                )
+        else:
+            ray.train.report(results)
+
+    print(f"Train losses: {running_train_losses}")
+    print(f"Val losses: {running_val_losses}")
+    print(f"Training model:\n {model}")
+    print(f"Trainable model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+
+
+def load_and_train(ray_config: CN, config: CN) -> None:
+    if ray_config:
+        config = merge_cfg(config, CN(ray_config))
+        with open(os.path.join(ray.train.get_context().get_trial_dir(), "config.yml"), "w") as f:
+            f.write(config.dump())
+
+    model = load_model(config)
+
+    optimizer = import_class_from_path(config.TRAIN.OPTIMIZER.class_path)(
+        model.parameters(), **config.TRAIN.OPTIMIZER.KWARGS
+    )
+    criterion = import_class_from_path(config.TRAIN.CRITERION.class_path)()
+    train_dataloader, val_dataloader, test_dataloder = get_data_loaders(config.DATASET, config.DATALOADER.KWARGS)
+    train(
+        model, criterion, train_dataloader, val_dataloader, optimizer, use_ray=bool(ray_config), **config.TRAIN.KWARGS
+    )
+    print(config)
+    return None
+
+
+def load_hyperparameter_search(config: CN) -> Any | CN:
+    # TODO: Add support for nested and conditional spaces (https://docs.ray.io/en/latest/tune/faq.html#nested-spaces).
+    if "SAMPLE_TYPE" in config:
+        return import_class_from_path(config["SAMPLE_TYPE"])(config["VALUES"])
+
+    parsed_config = CN()
+    for key, value in config.items():
+        if isinstance(value, CN):
+            parsed_config[key] = load_hyperparameter_search(value)
+    return CN(parsed_config)
+
+
+def main(config: CN) -> Optional[ExperimentAnalysis]:
+    if not config.HYPERPARAMETER_SEARCH.SEARCH_SPACE:
+        return load_and_train(None, config)  # type: ignore
+
+    ray_config = load_hyperparameter_search(config.HYPERPARAMETER_SEARCH.SEARCH_SPACE)
+    scheduler = import_class_from_path(config.HYPERPARAMETER_SEARCH.SCHEDULER.class_path)(
+        **config.HYPERPARAMETER_SEARCH.SCHEDULER.KWARGS
+    )
+
+    result = ray.tune.run(
+        partial(load_and_train, config=config),
+        resources_per_trial={"cpu": 2, "gpu": 1},
+        config=ray_config,
+        num_samples=1,
+        scheduler=scheduler,
+    )
+    return result  # type: ignore
+
+
+if __name__ == "__main__":
+    cfg = get_cfg("test/test_data/config/unet.yml")
+    main(cfg)
+    print(cfg)
