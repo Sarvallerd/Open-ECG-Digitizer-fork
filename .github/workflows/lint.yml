@@ -1,7 +1,7 @@
 name: Lint python
 on: [push]
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -10,4 +10,10 @@ jobs:
     - name: Install flake8
       run: python3 -m pip install flake8
     - name: Lint python
-      run: flake8
+      run: flake8 .
+    - uses: psf/black@stable
+      with:
+        options: "--check --verbose"
+        src: "."
+        jupyter: false
+        version: "24.8.0"

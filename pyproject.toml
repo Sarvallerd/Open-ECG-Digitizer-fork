@@ -9,3 +9,16 @@ prerelease = false
 [tool.semantic_release.branches.set_up_repository]
 match = "^(?!main$).+"
 prerelease = false
+
+[tool.black]
+line-length = 120
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+    "yacs.*",
+    "torchvision.*"
+]
+ignore_missing_imports = true

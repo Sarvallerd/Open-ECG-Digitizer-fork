@@ -1,0 +1,15 @@
+ipython==8.30.0
+matplotlib==3.9.3
+numpy==2.2.0
+pillow==11.0.0
+scikit-image==0.24.0
+scipy==1.14.1
+timm==1.0.12
+torch==2.5.1
+torchaudio==2.5.1
+torchvision==0.20.1
+tqdm==4.67.1
+types-tqdm==4.67.0.20241119
+types-setuptools==75.6.0.20241126
+yacs==0.1.8
+ray[data,train,tune]==2.40.0

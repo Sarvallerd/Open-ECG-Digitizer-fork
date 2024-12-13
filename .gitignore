@@ -1,0 +1,5 @@
+/data
+model_weights
+__pycache__
+venv
+.vscode
