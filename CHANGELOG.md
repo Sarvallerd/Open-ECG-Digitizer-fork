@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v0.2.0 (2024-12-16)
+
+### Bug Fixes
+
+* fix: one hot encode target mask ([`f7592b9`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f7592b96918105929d8d64b873889e759b7d60e7))
+
+* fix: path for dice loss ([`3b7c3ba`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/3b7c3ba959ef4cee1d87f540263083c5676e7f60))
+
+* fix: use custom loss ([`ccb697b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ccb697b8069d53007de44c44cbfdb211ba82fce5))
+
+### Continuous Integration
+
+* ci: ignore long comments ([`32d0c02`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/32d0c023e25ab801f9f6d0e1e43fd7ba37ca4b3e))
+
+### Features
+
+* feat: snake fitter, no cuda support yet ([`a0d659b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a0d659bb7ba0853d3f06d292392ecd5d6dab4848))
+
+* feat: grid detection with cuda support ([`456f152`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/456f152b6a848ccbbaefdfc7e18e3f170c55e704))
+
+* feat: snake and segmentation losses ([`7be3a0a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7be3a0a2ca9a6d55f2fcc7c827601fe8d3d0c182))
+
+### Testing
+
+* test: change model params for faster testing ([`888ab20`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/888ab20cd1056830456d98e0014e98dbd70cb070))
+
+### Unknown
+
+* Merge pull request #3 from Ahus-AIM/snakes_etc
+
+Snakes, Grid detection, Losses ([`0c099df`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/0c099df5e4a3a2fcffe29629856423c405c3475c))
+
+
 ## v0.1.0 (2024-12-13)
 
 ### Continuous Integration
