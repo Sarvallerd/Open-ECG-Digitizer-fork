@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List, Dict
 import torch
 import torch.nn.functional as F
 
@@ -110,3 +110,40 @@ class GridDetector:
         local_maxima = (padded_tensor[1:-1] > padded_tensor[:-2]) & (padded_tensor[1:-1] > padded_tensor[2:])
         indices = local_maxima.nonzero(as_tuple=True)[0]
         return indices
+
+
+class MultiscaleGridDetector:
+    def __init__(self, grid_detector: GridDetector, depth: int = 3, base: int = 5):
+        self.grid_detector = grid_detector
+        self.depth = depth
+        self.grid_sizes = [base**i for i in range(depth)]
+
+    @staticmethod
+    def split_image(image: torch.Tensor, grid_size: int) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        patch_height, patch_width = height // grid_size, width // grid_size
+        patches = image.unfold(0, patch_height, patch_height).unfold(1, patch_width, patch_width)
+        return patches.contiguous().view(-1, patch_height, patch_width)
+
+    def process_full_image(self, image: torch.Tensor) -> Dict[str, List[torch.Tensor]]:
+        device = image.device
+        results: Dict[str, List[torch.Tensor]] = {"theta1": [], "theta2": [], "distance1": [], "distance2": []}
+
+        for grid_size in self.grid_sizes:
+            results_per_scale = {key: torch.zeros((grid_size, grid_size), device=device) for key in results}
+
+            patches = self.split_image(image, grid_size)
+
+            for patch_idx, patch in enumerate(patches):
+                row, col = divmod(patch_idx, grid_size)
+                theta1, theta2, distance1, distance2 = self.grid_detector.detect_grid(patch)
+
+                results_per_scale["theta1"][row, col] = theta1
+                results_per_scale["theta2"][row, col] = theta2
+                results_per_scale["distance1"][row, col] = distance1
+                results_per_scale["distance2"][row, col] = distance2
+
+            for key in results:
+                results[key].append(results_per_scale[key])
+
+        return results
