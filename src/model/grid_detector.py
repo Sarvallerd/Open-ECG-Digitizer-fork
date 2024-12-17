@@ -90,7 +90,7 @@ class GridDetector:
             fft_accumulator[:, second_peak],
         )
 
-    def detect_grid(self, image: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __call__(self, image: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         theta1, theta2, fft_accumulator1, fft_accumulator2 = self.detect_angles(image)
         accumulator1 = torch.fft.rfft(fft_accumulator1, n=fft_accumulator1.shape[0] * 2).abs()[:500]
         accumulator2 = torch.fft.rfft(fft_accumulator2, n=fft_accumulator2.shape[0] * 2).abs()[:500]
@@ -125,7 +125,7 @@ class MultiscaleGridDetector:
         patches = image.unfold(0, patch_height, patch_height).unfold(1, patch_width, patch_width)
         return patches.contiguous().view(-1, patch_height, patch_width)
 
-    def process_full_image(self, image: torch.Tensor) -> Dict[str, List[torch.Tensor]]:
+    def __call__(self, image: torch.Tensor) -> Dict[str, List[torch.Tensor]]:
         device = image.device
         results: Dict[str, List[torch.Tensor]] = {"theta1": [], "theta2": [], "distance1": [], "distance2": []}
 
@@ -136,7 +136,7 @@ class MultiscaleGridDetector:
 
             for patch_idx, patch in enumerate(patches):
                 row, col = divmod(patch_idx, grid_size)
-                theta1, theta2, distance1, distance2 = self.grid_detector.detect_grid(patch)
+                theta1, theta2, distance1, distance2 = self.grid_detector(patch)
 
                 results_per_scale["theta1"][row, col] = theta1
                 results_per_scale["theta2"][row, col] = theta2
