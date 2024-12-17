@@ -4,11 +4,10 @@ import torch.nn.functional as F
 
 
 class GridDetector:
-    def __init__(self, n_iter: int, num_thetas: int, smoothing_sigma: int, hann_window_scale: float):
+    def __init__(self, n_iter: int, num_thetas: int, smoothing_sigma: int):
         self.n_iter = n_iter
         self.num_thetas = num_thetas
         self.smoothing_sigma = smoothing_sigma
-        self.hann_window_scale = hann_window_scale
 
     def create_gaussian_kernel(self, sigma: int) -> torch.Tensor:
         size = 5 * sigma
@@ -69,7 +68,7 @@ class GridDetector:
             fft_accumulator: torch.Tensor = torch.fft.rfft(accumulator, dim=0).abs()
             projected_accumulator = fft_accumulator.sum(0)
 
-            hann = torch.hann_window(int(fft_accumulator.shape[1] * self.hann_window_scale), device=device)
+            hann = torch.hann_window(fft_accumulator.shape[1] // 2, device=device)
             hann = torch.cat([hann, hann])
             projected_accumulator *= hann
 
