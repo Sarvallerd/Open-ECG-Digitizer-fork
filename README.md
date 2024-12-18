@@ -1,7 +1,6 @@
 # Electrocardiogram-Digitization
 
-![Tests](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/actions/workflows/test.yml/badge.svg?branch=main)
-
+![Tests](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/actions/workflows/test.yml/badge.svg?branch=main) ![](https://img.shields.io/badge/%20style-google-3666d6.svg)
 
 ## Run a training session
 1. Run `python3 -m src.train` in the terminal from the repository root folder.
