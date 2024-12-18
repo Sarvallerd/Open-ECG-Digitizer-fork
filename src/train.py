@@ -49,8 +49,8 @@ def run_epoch(
             predictors = predictors.to(device)
             target = target.to(device)
             output = model(predictors)
-            predictions.append(output.detach().cpu().numpy())
-            targets.append(target.detach().cpu().numpy())
+            predictions.append(output.detach().cpu())
+            targets.append(target.detach().cpu())
 
             with torch.no_grad():
                 if hasattr(model, "extract_embeddings"):
