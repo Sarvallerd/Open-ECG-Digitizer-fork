@@ -8,6 +8,7 @@ MODEL:
 
 TRAIN:
   COMPILE: False
+  CUDNN_BENCHMARK: True
   OPTIMIZER:
     class_path: 'torch.optim.Adam'
     KWARGS:

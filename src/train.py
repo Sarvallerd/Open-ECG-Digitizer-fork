@@ -237,6 +237,7 @@ def load_hyperparameter_search(config: CN) -> Any | CN:
 
 
 def main(config: CN) -> Optional[ExperimentAnalysis]:
+    torch.backends.cudnn.benchmark = config.TRAIN.CUDNN_BENCHMARK
     if not config.HYPERPARAMETER_SEARCH.SEARCH_SPACE:
         return load_and_train(None, config)  # type: ignore
 
