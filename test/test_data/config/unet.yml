@@ -7,12 +7,15 @@ MODEL:
     dims: [1, 2]
 
 TRAIN:
-  METRICS:
-    -
+  COMPILE: False
+  CUDNN_BENCHMARK: True
   OPTIMIZER:
     class_path: 'torch.optim.Adam'
     KWARGS:
       lr: 0.001
+  MIXED_PRECISION_SCALER:
+    class_path: 'torch.amp.GradScaler'
+    KWARGS: {}
   CRITERION:
     class_path: 'src.loss.loss.WeightedDiceLoss'
     KWARGS: {}
@@ -20,6 +23,10 @@ TRAIN:
     epochs: 1
     metrics: []
     device: 'cpu'
+    metrics:
+      -
+        class_path: 'src.loss.loss.MulticlassBinaryCrossEntropyLoss'
+        fit: false
 
 HYPERPARAMETER_SEARCH:
   SCHEDULER:

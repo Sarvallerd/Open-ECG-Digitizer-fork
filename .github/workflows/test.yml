@@ -12,5 +12,5 @@ jobs:
     - name: Install pytest
       run: python3 -m pip install pytest
     - name: Run pytests
-      run: timeout 100 python3 -m pytest
+      run: timeout 300 python3 -m pytest
 

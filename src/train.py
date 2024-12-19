@@ -19,6 +19,7 @@ def run_epoch(
     criterion: nn.Module,
     dataloader: torch.utils.data.DataLoader[Any],
     optimizer: Optional[torch.optim.Optimizer] = None,
+    mixed_precision_scaler: Optional[torch.amp.grad_scaler.GradScaler] = None,
     eval: bool = False,
     epoch: Optional[int] = None,
     max_epochs: Optional[int] = None,
@@ -48,19 +49,26 @@ def run_epoch(
                 optimizer.zero_grad()
             predictors = predictors.to(device)
             target = target.to(device)
-            output = model(predictors)
-            predictions.append(output.detach().cpu().numpy())
-            targets.append(target.detach().cpu().numpy())
+            with torch.autocast(device_type=str(device), enabled=mixed_precision_scaler is not None):
+                output = model(predictors)
+                predictions.append(output.detach().cpu())
+                targets.append(target.detach().cpu())
 
-            with torch.no_grad():
-                if hasattr(model, "extract_embeddings"):
-                    embeddings.append(model.extract_embeddings(predictors))
+                with torch.no_grad():
+                    if hasattr(model, "extract_embeddings"):
+                        embeddings.append(model.extract_embeddings(predictors))
 
-            loss = criterion(output, target)
+                loss = criterion(output, target)
 
-            if not eval:
-                loss.backward()
-                optimizer.step()  # type: ignore
+                if eval:
+                    pass
+                elif mixed_precision_scaler:
+                    mixed_precision_scaler.scale(loss).backward()
+                    mixed_precision_scaler.step(optimizer)  # type: ignore
+                    mixed_precision_scaler.update()
+                else:
+                    loss.backward()
+                    optimizer.step()  # type: ignore
 
             total_loss += loss.item()
             num_cases += predictors.shape[0]
@@ -77,6 +85,7 @@ def train(
     train_dataloader: torch.utils.data.DataLoader[Any],
     val_dataloader: torch.utils.data.DataLoader[Any],
     optimizer: torch.optim.Optimizer,
+    mixed_precision_scaler: Optional[torch.amp.grad_scaler.GradScaler],
     use_ray: bool,
     epochs: int,
     metrics: Dict[Any, Any],
@@ -100,7 +109,7 @@ def train(
             metric_class = import_class_from_path(metric["class_path"])()
             metric_class.fit(train_dataloader.dataset.data)  # type: ignore
         else:
-            metric_class = import_class_from_path(metric["class_path"])
+            metric_class = import_class_from_path(metric["class_path"])()
         metrics_instances.append(metric_class)
 
     best_metrics = {metric.__name__: -np.inf for metric in metrics_instances}
@@ -108,12 +117,28 @@ def train(
 
     for epoch in range(num_epochs):
         train_loss, train_cases, _, _, train_predictions, train_targets = run_epoch(
-            model, criterion, train_dataloader, optimizer, eval=False, epoch=epoch, max_epochs=num_epochs, device=device
+            model,
+            criterion,
+            train_dataloader,
+            optimizer,
+            mixed_precision_scaler=mixed_precision_scaler,
+            eval=False,
+            epoch=epoch,
+            max_epochs=num_epochs,
+            device=device,
         )
         running_train_losses.append(train_loss / train_cases)
 
         val_loss, val_cases, _, _, val_predictions, val_targets = run_epoch(
-            model, criterion, val_dataloader, optimizer, eval=False, epoch=epoch, max_epochs=num_epochs, device=device
+            model,
+            criterion,
+            val_dataloader,
+            optimizer,
+            mixed_precision_scaler=mixed_precision_scaler,
+            eval=False,
+            epoch=epoch,
+            max_epochs=num_epochs,
+            device=device,
         )
 
         running_val_losses.append(val_loss / val_cases)
@@ -125,17 +150,17 @@ def train(
 
         for metric in metrics_instances:
             name = metric.__name__
-            train_metric = metric(train_targets, train_predictions)
-            val_metric = metric(val_targets, val_predictions)
-            calculated_metrics[f"train_{name}"] = train_metric
-            calculated_metrics[f"val_{name}"] = val_metric
+            train_metric = metric(train_predictions, train_targets)
+            val_metric = metric(val_predictions, val_targets)
+            calculated_metrics[f"train_{name}"] = train_metric.float().numpy()
+            calculated_metrics[f"val_{name}"] = val_metric.float().numpy()
             if val_metric > best_metrics[name]:
                 best_metrics[name] = val_metric
                 is_new_best_metric = True
 
         results = {"train_loss": train_loss / train_cases, "val_loss": curr_val_loss} | calculated_metrics
         if not use_ray:
-            print(f"Epoch {epoch}/{num_epochs}: {results}")
+            print(f"Epoch {epoch + 1}/{num_epochs}: {results}")
         elif is_new_best_metric:
             with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
                 path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
@@ -165,10 +190,35 @@ def load_and_train(ray_config: CN, config: CN) -> None:
     optimizer = import_class_from_path(config.TRAIN.OPTIMIZER.class_path)(
         model.parameters(), **config.TRAIN.OPTIMIZER.KWARGS
     )
+    mixed_precision_scaler = (
+        import_class_from_path(config.TRAIN.MIXED_PRECISION_SCALER.class_path)(
+            model.parameters(), **config.TRAIN.MIXED_PRECISION_SCALER.KWARGS
+        )
+        if hasattr(config.TRAIN, "MIXED_PRECISION_SCALER")
+        else None
+    )
     criterion = import_class_from_path(config.TRAIN.CRITERION.class_path)()
     train_dataloader, val_dataloader, test_dataloder = get_data_loaders(config.DATASET, config.DATALOADER.KWARGS)
-    train(
-        model, criterion, train_dataloader, val_dataloader, optimizer, use_ray=bool(ray_config), **config.TRAIN.KWARGS
+
+    train_fn = train
+
+    if config.TRAIN.COMPILE:
+        if ray_config and mixed_precision_scaler:
+            print(
+                "Compilation with torch is disabled when using ray and mixed precision scaler as the compiled "
+                "function is not picklable."
+            )
+        else:
+            train_fn = torch.compile(train_fn)
+    train_fn(
+        model,
+        criterion,
+        train_dataloader,
+        val_dataloader,
+        optimizer,
+        mixed_precision_scaler=mixed_precision_scaler,
+        use_ray=bool(ray_config),
+        **config.TRAIN.KWARGS,
     )
     print(config)
     return None
@@ -187,6 +237,7 @@ def load_hyperparameter_search(config: CN) -> Any | CN:
 
 
 def main(config: CN) -> Optional[ExperimentAnalysis]:
+    torch.backends.cudnn.benchmark = config.TRAIN.CUDNN_BENCHMARK
     if not config.HYPERPARAMETER_SEARCH.SEARCH_SPACE:
         return load_and_train(None, config)  # type: ignore
 
@@ -206,6 +257,6 @@ def main(config: CN) -> Optional[ExperimentAnalysis]:
 
 
 if __name__ == "__main__":
-    cfg = get_cfg("test/test_data/config/unet.yml")
+    cfg = get_cfg("src/config/unet.yml")
     main(cfg)
     print(cfg)

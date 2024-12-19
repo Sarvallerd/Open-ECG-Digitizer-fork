@@ -3,27 +3,23 @@ MODEL:
   KWARGS:
     in_chans: 3
     out_channel: 3
-    depths: [3, 3, 9, 3]
-    dims: [8, 16, 32, 64]
+    depths: [1, 2]
+    dims: [1, 2]
 
 TRAIN:
-  COMPILE: False
+  COMPILE: True
   CUDNN_BENCHMARK: True
   OPTIMIZER:
     class_path: 'torch.optim.Adam'
     KWARGS:
       lr: 0.001
-  MIXED_PRECISION_SCALER:
-    class_path: 'torch.amp.GradScaler'
-    KWARGS: {}
   CRITERION:
     class_path: 'src.loss.loss.WeightedDiceLoss'
-    KWARGS:
-      alpha: 2.0
+    KWARGS: {}
   KWARGS:
-    epochs: 10
+    epochs: 1
     metrics: []
-    device: 'cuda:0'
+    device: 'cpu'
     metrics:
       -
         class_path: 'src.loss.loss.MulticlassBinaryCrossEntropyLoss'
@@ -39,34 +35,21 @@ HYPERPARAMETER_SEARCH:
       grace_period: 20
       reduction_factor: 4
   SEARCH_SPACE:
-    MODEL:
-      KWARGS:
-        dims:
-          SAMPLE_TYPE: 'ray.tune.grid_search'
-          VALUES: [[4, 8, 16]]
-        depths:
-          SAMPLE_TYPE: 'ray.tune.grid_search'
-          VALUES: [[2, 2, 2]]
 
 DATALOADER:
   class_path: 'torch.utils.data.DataLoader'
   KWARGS:
     batch_size: 1
     shuffle: False
-    num_workers: 2
 
 DATASET:
   class_path: 'src.dataset.ecg_scan.ECGScanDataset'
-  KWARGS: {}
+  KWARGS:
+    ecg_scan_path: '../../test/test_data/data/ecg_scans'
+    ecg_mask_path: '../../test/test_data/data/ecg_masks/masks'
   TRAIN:
-    KWARGS:
-      ecg_scan_path: '../../data/ecg/ecg_scans/train'
-      ecg_mask_path: '../../data/ecg/ecg_masks/train'
+    KWARGS: {}
   VAL:
-    KWARGS:
-      ecg_scan_path: '../../data/ecg/ecg_scans/val'
-      ecg_mask_path: '../../data/ecg/ecg_masks/val'
+    KWARGS: {}
   TEST:
-    KWARGS:
-      ecg_scan_path: '../../data/ecg/ecg_scans/test'
-      ecg_mask_path: '../../data/ecg/ecg_masks/test'
+    KWARGS: {}
