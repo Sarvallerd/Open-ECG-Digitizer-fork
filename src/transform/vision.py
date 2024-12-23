@@ -39,10 +39,14 @@ class RandomShiftTextTransform(nn.Module):
         blended_img = torch.where(rolled_text_mask.bool(), (1 - opacity) * img + opacity * rolled_text_region, img)
 
         background_mask = (mask[2:] == 0).bool()
-        updated_text_mask = torch.where(
+        mask[1] = torch.where(
             background_mask & (rolled_text_mask[0] > 0), torch.max(opacity * torch.ones_like(mask[1]), mask[1]), mask[1]
-        )
-        mask[1] = updated_text_mask
+        )[0]
+        mask[0] = torch.where(
+            background_mask & (rolled_text_mask[0] > 0),
+            torch.min((1 - opacity) * torch.ones_like(mask[0]), mask[0]),
+            mask[0],
+        )[0]
 
         return blended_img, mask
 
@@ -52,9 +56,10 @@ class RandomTextOverlayTransform(nn.Module):
 
     def __init__(self, text_path: Union[str | None] = None, opacity_range: Tuple[float, float] = (0.1, 0.8)):
         super().__init__()
+        self.text_path = text_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "overlay_images")
         self.texts = [
-            torch.tensor(plt.imread(os.path.join(text_path, f))).float().permute(2, 0, 1)[:3]
-            for f in os.listdir(text_path)
+            torch.tensor(plt.imread(os.path.join(self.text_path, f))).float().permute(2, 0, 1)[:3]
+            for f in os.listdir(self.text_path)
         ]
         self.opacity_range = opacity_range
         self.rotation = T.RandomRotation(degrees=180, fill=(1,), interpolation=T.InterpolationMode.BILINEAR)
@@ -79,6 +84,9 @@ class RandomTextOverlayTransform(nn.Module):
 
         mask_channel_1_condition = binary_text_mask & (mask[2:] == 0).all(0)
         mask[1] = torch.where(mask_channel_1_condition, torch.max(opacity * torch.ones_like(mask[1]), mask[1]), mask[1])
+        mask[0] = torch.where(
+            mask_channel_1_condition, torch.min((1 - opacity) * torch.ones_like(mask[1]), mask[0]), mask[0]
+        )
 
         return img, mask.float()
 
