@@ -20,6 +20,7 @@ strict = true
 module = [
     "yacs.*",
     "torchvision.*",
-    "scipy.*"
+    "scipy.*",
+    "scikit-image.*"
 ]
 ignore_missing_imports = true

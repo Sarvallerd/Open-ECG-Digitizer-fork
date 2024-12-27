@@ -1,6 +1,9 @@
 from typing import Tuple, Dict
-import torch
 from torchvision.transforms.functional import perspective
+from scipy.ndimage import uniform_filter
+from skimage.filters import threshold_multiotsu
+from skimage.morphology import remove_small_objects, skeletonize
+import torch
 import matplotlib.pyplot as plt
 
 DEBUG = False
@@ -128,7 +131,7 @@ class PerspectiveDetector:
             torch.cat([torch.hann_window(self.num_thetas // 2), torch.hann_window(self.num_thetas // 2)])
             .unsqueeze(0)
             .to(image.device)
-        ).pow(0.0)
+        )
 
         # PASS 1
         thetas = self.get_initial_thetas().to(image.device)
@@ -138,6 +141,8 @@ class PerspectiveDetector:
         if DEBUG:
             fig, ax = plt.subplots(1, 1, figsize=(25, 15))
             ax.imshow(accumulator.cpu().numpy(), aspect="auto", cmap="nipy_spectral", interpolation="nearest")
+            plt.tight_layout()
+            plt.savefig("accumulator1.png")
             plt.show()
 
         (
@@ -172,6 +177,8 @@ class PerspectiveDetector:
         if DEBUG:
             fig, ax = plt.subplots(1, 1, figsize=(25, 15))
             ax.imshow(accumulator.cpu().numpy(), aspect="auto", cmap="nipy_spectral", interpolation="nearest")
+            plt.tight_layout()
+            plt.savefig("accumulator2.png")
             plt.show()
 
         (
@@ -185,6 +192,13 @@ class PerspectiveDetector:
             values_vertical,
         ) = self.get_line_values(accumulator[:, self.num_thetas // 2 :], thetas[self.num_thetas // 2 :], rhos)
 
+        if DEBUG:
+            fig, ax = plt.subplots(1, 1, figsize=(25, 15))
+            ax.plot(values_horizontal.cpu().numpy(), label="Horizontal")
+            ax.plot(values_vertical.cpu().numpy(), label="Vertical")
+            ax.legend()
+            plt.show()
+
         params = {
             "left": (rhos_horizontal[0], thetas_horizontal[0]),
             "right": (rhos_horizontal[-1], thetas_horizontal[-1]),
@@ -197,8 +211,8 @@ class PerspectiveDetector:
     def get_initial_thetas(self) -> torch.Tensor:
         return torch.cat(
             [
-                torch.linspace(-torch.pi / 6, torch.pi / 6, self.num_thetas // 2),
-                torch.linspace(2 * torch.pi / 6, 4 * torch.pi / 6, self.num_thetas // 2),
+                torch.linspace(-torch.pi / 4, torch.pi / 4, self.num_thetas // 2),
+                torch.linspace(torch.pi / 4, 3 * torch.pi / 4, self.num_thetas // 2),
             ]
         )
 
@@ -207,15 +221,23 @@ class PerspectiveDetector:
         Correct the perspective of an image of a gridded paper.
 
         Args:
-            image (torch.Tensor): The input image tensor, with shape [H, W]. Should be a binary image.
+            image (torch.Tensor): The input image tensor, with shape [C, H, W] or [H,W].
             eps (float): Margin added to the thetas for the second pass of the Hough transform.
 
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: The corrected image tensor and the source points in pixel coordiantes.
 
         """
+        binary_image = self.binarize(image)
 
-        params = self.find_bounding_lines(image, eps)
+        if DEBUG:
+            fig, ax = plt.subplots(1, 1, figsize=(25, 15))
+            ax.imshow(binary_image.cpu().numpy(), cmap="gray")
+            plt.tight_layout()
+            plt.savefig("binary_image.png")
+            plt.show()
+
+        params = self.find_bounding_lines(binary_image, eps)
 
         source_points = torch.stack(
             [
@@ -229,12 +251,37 @@ class PerspectiveDetector:
         return self.apply_perspective(image, source_points), source_points
 
     def apply_perspective(self, image: torch.Tensor, source_points: torch.Tensor) -> torch.Tensor:
-        H, W = image.shape
+        H, W = image.shape[-2:]
         destination_points = [[0.0, 0.0], [W, 0.0], [W, H], [0.0, H]]
 
         corrected: torch.Tensor = perspective(image.unsqueeze(0), source_points.tolist(), destination_points).squeeze(0)
 
         return corrected
+
+    def binarize(self, image: torch.Tensor) -> torch.Tensor:
+        """
+        Normalizes image to compensate for uneven lighting, then binarizes image by applying a two-sided threshold.
+        Lastly, removes clutter and skeletonizes the image to preserve grid-like structures.
+
+        Args:
+            image (torch.Tensor): The input image tensor, with shape [C, H, W] or [H, W].
+
+        Returns:
+            torch.Tensor: The binarized image tensor with shape [H, W].
+        """
+        device = image.device
+        if image.ndim == 3:
+            flat_image = image.float().mean(0)
+        else:
+            flat_image = image.float()
+        flat_image_np = flat_image.detach().cpu().numpy()
+        flat_image_np = flat_image_np / uniform_filter(flat_image_np, size=35)
+        thresholds = threshold_multiotsu(flat_image_np, 4)  # type: ignore
+        flat_image_np = (flat_image_np > thresholds[0]) & (flat_image_np < thresholds[1])
+        flat_image_np = remove_small_objects(flat_image_np, min_size=16, connectivity=2)  # type: ignore
+        flat_image_np = skeletonize(flat_image_np)  # type: ignore
+        binary_image: torch.Tensor = torch.tensor(flat_image_np, dtype=torch.bool).to(device)
+        return binary_image
 
     def calculate_line_variances(self, accumulator: torch.Tensor) -> torch.Tensor:
         """
