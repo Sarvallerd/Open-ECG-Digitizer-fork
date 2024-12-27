@@ -14,3 +14,4 @@ types-setuptools==75.6.0.20241126
 yacs==0.1.8
 ray[data,train,tune]==2.40.0
 tensorboard==2.18.0
+scikit-image==0.24.0
