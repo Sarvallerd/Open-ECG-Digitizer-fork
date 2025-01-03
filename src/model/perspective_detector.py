@@ -3,6 +3,7 @@ from torchvision.transforms.functional import perspective
 from scipy.ndimage import uniform_filter
 from skimage.filters import threshold_multiotsu
 from skimage.morphology import remove_small_objects, skeletonize
+from torch.nn.functional import avg_pool2d
 import torch
 import matplotlib.pyplot as plt
 
@@ -258,6 +259,23 @@ class PerspectiveDetector:
 
         return corrected
 
+    def quantile(self, tensor: torch.Tensor, q: float, max_num_elems: int = 100_000) -> torch.Tensor:
+        r"""
+        Compute the q-th quantile of a tensor.
+
+        Args:
+            tensor (torch.Tensor): The input tensor.
+            q (float): The quantile to compute.
+
+        Returns:
+            torch.Tensor: The q-th quantile of the tensor.
+        """
+        flattened_tensor = tensor.flatten()
+        if len(flattened_tensor) > max_num_elems:
+            indices = torch.randperm(len(flattened_tensor))[:max_num_elems]
+            flattened_tensor = flattened_tensor[indices]
+        return torch.quantile(flattened_tensor, q)
+
     def binarize(self, image: torch.Tensor) -> torch.Tensor:
         """
         Normalizes image to compensate for uneven lighting, then binarizes image by applying a two-sided threshold.
@@ -274,6 +292,17 @@ class PerspectiveDetector:
             flat_image = image.float().mean(0)
         else:
             flat_image = image.float()
+
+        blurred = avg_pool2d(flat_image.unsqueeze(0).unsqueeze(0), 9, stride=1, padding=4).squeeze()
+        differenced = flat_image - blurred
+
+        local_minima_candidates: torch.Tensor = differenced < self.quantile(differenced, 0.1)
+
+        local_minima_candidates_np = remove_small_objects(
+            local_minima_candidates.cpu().numpy(), min_size=64, connectivity=2
+        )  # type: ignore
+        local_minima_candidates = torch.tensor(local_minima_candidates_np, dtype=torch.bool).to(device)
+
         flat_image_np = flat_image.detach().cpu().numpy()
         flat_image_np = flat_image_np / uniform_filter(flat_image_np, size=35)
         thresholds = threshold_multiotsu(flat_image_np, 4)  # type: ignore
@@ -281,7 +310,7 @@ class PerspectiveDetector:
         flat_image_np = remove_small_objects(flat_image_np, min_size=16, connectivity=2)  # type: ignore
         flat_image_np = skeletonize(flat_image_np)  # type: ignore
         binary_image: torch.Tensor = torch.tensor(flat_image_np, dtype=torch.bool).to(device)
-        return binary_image
+        return binary_image & local_minima_candidates
 
     def calculate_line_variances(self, accumulator: torch.Tensor) -> torch.Tensor:
         """
