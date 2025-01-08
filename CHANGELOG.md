@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.10.0 (2025-01-08)
+
+### Features
+
+* feat: enable huggingface segmentation models
+
+The SegFormer model is configured. ([`afc4b9a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/afc4b9a9d5be8cbb032bef174f9a546dfb247541))
+
+### Unknown
+
+* Merge pull request #12 from Ahus-AIM/huggingface_segmentation
+
+feat: enable huggingface segmentation models ([`bae4a35`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bae4a3599fd95e67008498c86e393c3c40e7cc95))
+
+
 ## v0.9.0 (2025-01-08)
 
 ### Features
