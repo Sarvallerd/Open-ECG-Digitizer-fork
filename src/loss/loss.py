@@ -21,12 +21,12 @@ class WeightedDiceLoss(nn.Module):
     def forward(self, pred: torch.Tensor, target_one_hot: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
         pred_probs: torch.Tensor = F.softmax(pred, dim=1)
 
-        intersection: torch.Tensor = torch.sum(pred_probs * target_one_hot, dim=(0, 2, 3))
-        union: torch.Tensor = torch.sum(pred_probs, dim=(0, 2, 3)) + torch.sum(target_one_hot, dim=(0, 2, 3))
-        dice: torch.Tensor = 1 - (2 * intersection + eps) / (union + eps)
+        intersection: torch.Tensor = torch.sum(pred_probs * target_one_hot, dim=(2, 3))
+        union: torch.Tensor = torch.sum(pred_probs, dim=(2, 3)) + torch.sum(target_one_hot, dim=(2, 3))
+        dice: torch.Tensor = 1 - (2 * intersection) / (union + eps)
 
         multiplier: torch.Tensor = torch.ones_like(dice).to(target_one_hot.device)
-        multiplier[self.signal_class] = self.alpha
+        multiplier[:, self.signal_class] = self.alpha
         multiplier /= multiplier.sum()
 
         dice = dice * multiplier
