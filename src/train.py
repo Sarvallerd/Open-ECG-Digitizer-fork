@@ -12,6 +12,8 @@ import ray
 import tempfile
 import torch
 import os
+import multiprocessing
+import torch._dynamo
 
 
 def run_epoch(
@@ -283,6 +285,7 @@ def main(config: CN) -> Optional[ExperimentAnalysis]:
 
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method("spawn", force=True)  # CUDA does not support "fork", which is default on linux.
     cfg = get_cfg("src/config/unet.yml")
     main(cfg)
     print(cfg)

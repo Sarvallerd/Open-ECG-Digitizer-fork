@@ -1,6 +1,5 @@
-from tqdm import tqdm
 from typing import Any, List, Tuple, Union
-import matplotlib.pyplot as plt
+from torchvision.io import decode_image
 import numpy as np
 import os
 import torch
@@ -25,9 +24,6 @@ class ECGScanDataset(torch.utils.data.Dataset[Any]):
             self.ecg_scan_files = self.ecg_scan_files[:load_n]
             self.ecg_mask_files = self.ecg_mask_files[:load_n]
 
-        self.ecg_scans = self._load_scans(self.ecg_scan_files)
-        self.ecg_masks = self._load_masks(self.ecg_mask_files)
-
     def _find_ecg_files(self) -> Tuple[List[str], List[str]]:
         for path in [self.ecg_scan_path, self.ecg_mask_path]:
             if not os.path.exists(path):
@@ -44,34 +40,28 @@ class ECGScanDataset(torch.utils.data.Dataset[Any]):
         ecg_mask_files = list(map(lambda x: os.path.join(self.ecg_mask_path, f"{x}.npy"), ecg_mask_filenames))
         return ecg_scan_files, ecg_mask_files
 
-    def _load_scans(self, files: List[str]) -> List[torch.Tensor]:
-        loaded_scans = []
-        for file in tqdm(files, desc="Loading ECG scans"):
-            loaded_scans.append(
-                torch.tensor(plt.imread(os.path.join(self.ecg_scan_path, file))).float().permute(2, 0, 1)[:3]
-            )
-        return loaded_scans
+    def _load_scan(self, file: str) -> torch.Tensor:
+        scan: torch.Tensor = decode_image(os.path.join(self.ecg_scan_path, file), mode="RGB").float() / 255.0
+        return scan
 
-    def _load_masks(self, files: List[str]) -> List[torch.Tensor]:
-        loaded_files = []
-        for file in tqdm(files, desc="Loading ECG masks"):
-            loaded_files.append(torch.tensor(np.load(file)).float())
-        if loaded_files[0].shape[0] != 3:
-            loaded_files = self._mask_to_one_hot(loaded_files)
-        return loaded_files
+    def _load_mask(self, file: str) -> torch.Tensor:
+        loaded_mask = torch.tensor(np.load(file)).float()
+        if loaded_mask.shape[0] != 3:
+            loaded_mask = self._mask_to_one_hot(loaded_mask)
+        return loaded_mask
 
-    def _mask_to_one_hot(self, masks: List[torch.Tensor]) -> List[torch.Tensor]:
-        num_classes = max([int(torch.max(masks[i]).item()) for i in range(len(masks))]) + 1
-        one_hot_mask = []
-        for i in range(len(masks)):
-            one_hot_mask.append(torch.nn.functional.one_hot(masks[i].long(), num_classes).permute(2, 0, 1).float())
+    def _mask_to_one_hot(self, mask: torch.Tensor) -> torch.Tensor:
+        num_classes = int(torch.max(mask)) + 1
+        one_hot_mask: torch.Tensor = torch.nn.functional.one_hot(mask.long(), num_classes).permute(2, 0, 1).float()
         return one_hot_mask
 
     def __len__(self) -> int:
         return len(self.ecg_scan_files)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        scan, mask = self.ecg_scans[idx], self.ecg_masks[idx]
+        scan = self._load_scan(self.ecg_scan_files[idx])
+        mask = self._load_mask(self.ecg_mask_files[idx])
+
         if self.transform:
             scan, mask = self.transform(scan, mask)
         return scan, mask
