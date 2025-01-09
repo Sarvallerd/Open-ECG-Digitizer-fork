@@ -38,6 +38,12 @@ TRAIN:
       -
         class_path: 'src.loss.loss.MulticlassBinaryCrossEntropyLoss'
         fit: false
+        KWARGS: {}
+      -
+        class_path: 'src.loss.loss.MulticlassBinaryDiceLoss'
+        fit: false
+        KWARGS:
+          union_exponent: 2.0
 
 HYPERPARAMETER_SEARCH:
   SCHEDULER:

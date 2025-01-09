@@ -18,12 +18,12 @@ TRAIN:
     KWARGS: {}
   KWARGS:
     epochs: 1
-    metrics: []
     device: 'cpu'
     metrics:
       -
         class_path: 'src.loss.loss.MulticlassBinaryCrossEntropyLoss'
         fit: false
+        KWARGS: {}
 
 HYPERPARAMETER_SEARCH:
   SCHEDULER:

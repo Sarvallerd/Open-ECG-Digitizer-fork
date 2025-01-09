@@ -111,10 +111,10 @@ def train(
 
     for metric in metrics:
         if metric.get("fit", False):
-            metric_class = import_class_from_path(metric["class_path"])()
+            metric_class = import_class_from_path(metric["class_path"])(**metric["KWARGS"])
             metric_class.fit(train_dataloader.dataset.data)  # type: ignore
         else:
-            metric_class = import_class_from_path(metric["class_path"])()
+            metric_class = import_class_from_path(metric["class_path"])(**metric["KWARGS"])
         metrics_instances.append(metric_class)
 
     best_metrics = {metric.__name__: -np.inf for metric in metrics_instances}
