@@ -1,19 +1,25 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 from torchvision.transforms.functional import perspective
 from skimage.filters import threshold_multiotsu
 from skimage.morphology import remove_small_objects, skeletonize
 from torch.nn.functional import avg_pool2d
+from numpy.typing import NDArray
 import torch
 import matplotlib.pyplot as plt
 
 DEBUG = False
 
 
+def rgb_to_grayscale(image: torch.Tensor) -> torch.Tensor:
+    return torch.mean(image, dim=0, keepdim=True)
+
+
 class PerspectiveDetector:
 
-    def __init__(self, num_thetas: int, percentile: float = 0.01):
+    def __init__(self, num_thetas: int, percentile: float = 0.01, max_num_nonzero: int = 100_000) -> None:
         self.num_thetas = num_thetas
         self.percentile = percentile
+        self.max_num_nonzero = max_num_nonzero
 
     def hough_transform(self, image: torch.Tensor, thetas: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -35,6 +41,10 @@ class PerspectiveDetector:
         num_rhos = len(rhos)
 
         y_idxs, x_idxs = torch.nonzero(image, as_tuple=True)
+        if len(y_idxs) > self.max_num_nonzero:
+            indices = torch.randperm(len(y_idxs))[: self.max_num_nonzero]
+            y_idxs = y_idxs[indices]
+            x_idxs = x_idxs[indices]
         cos_thetas = torch.cos(thetas)
         sin_thetas = torch.sin(thetas)
 
@@ -54,8 +64,8 @@ class PerspectiveDetector:
         accumulator = accumulator.view(len(rhos), len(thetas))
 
         # Remove most of the negative rhos
-        rhos = rhos[num_rhos // 3 :]
-        accumulator = accumulator[num_rhos // 3 :]
+        rhos = rhos[3 * num_rhos // 7 :]
+        accumulator = accumulator[3 * num_rhos // 7 :]
 
         # The edges of the accumulator are set to the values of the adjacent cells
         # to avoid edge effects in the line extraction
@@ -64,7 +74,7 @@ class PerspectiveDetector:
         accumulator[:, num_thetas // 2 - 1] = accumulator[:, num_thetas // 2 - 2]
         accumulator[:, num_thetas // 2] = accumulator[:, num_thetas // 2 + 1]
 
-        return accumulator, rhos
+        return accumulator.float(), rhos
 
     def get_line_values(
         self, accumulator: torch.Tensor, thetas: torch.Tensor, rhos: torch.Tensor
@@ -138,7 +148,7 @@ class PerspectiveDetector:
             torch.cat([torch.hann_window(self.num_thetas // 2), torch.hann_window(self.num_thetas // 2)])
             .unsqueeze(0)
             .to(image.device)
-        )
+        ).pow(0.25)
 
         # PASS 1
         thetas = self.get_initial_thetas().to(image.device)
@@ -228,7 +238,7 @@ class PerspectiveDetector:
         Correct the perspective of an image of a gridded paper.
 
         Args:
-            image (torch.Tensor): The input image tensor, with shape [C, H, W] or [H,W].
+            image (torch.Tensor): The input image tensor, with shape [B, C, H, W], [C, H, W] or [H,W].
             eps (float): Margin added to the thetas for the second pass of the Hough transform.
 
         Returns:
@@ -258,14 +268,24 @@ class PerspectiveDetector:
         return self.apply_perspective(image, source_points), source_points
 
     def apply_perspective(self, image: torch.Tensor, source_points: torch.Tensor) -> torch.Tensor:
+        original_shape = image.shape
+        if image.ndim == 2:  # (H, W)
+            image = image.unsqueeze(0)
+        if image.ndim == 3:  # (C, H, W)
+            image = image.unsqueeze(0)
+
         H, W = image.shape[-2:]
         destination_points = [[0.0, 0.0], [W, 0.0], [W, H], [0.0, H]]
+        corrected: torch.Tensor = perspective(image, source_points.tolist(), destination_points)
 
-        corrected: torch.Tensor = perspective(image.unsqueeze(0), source_points.tolist(), destination_points).squeeze(0)
+        if len(original_shape) == 4:
+            return corrected
+        elif len(original_shape) == 3:
+            return corrected.squeeze(0)
+        else:
+            return corrected.squeeze(0).squeeze(0)
 
-        return corrected
-
-    def quantile(self, tensor: torch.Tensor, q: float, max_num_elems: int = 100_000) -> torch.Tensor:
+    def quantile(self, tensor: torch.Tensor, q: float, max_num_elems: int = 10_000) -> torch.Tensor:
         r"""
         Compute the q-th quantile of a tensor.
 
@@ -282,9 +302,52 @@ class PerspectiveDetector:
             flattened_tensor = flattened_tensor[indices]
         return torch.quantile(flattened_tensor, q)
 
+    def binary_erosion(self, image: torch.Tensor, kernel_size: int = 15) -> torch.Tensor:
+        convolved = avg_pool2d(
+            image.unsqueeze(0).unsqueeze(0), kernel_size, stride=1, padding=kernel_size // 2
+        ).squeeze()
+        return convolved >= 0.9
+
+    def threshold_multiotsu(
+        self, image: torch.Tensor, num_classes: int, max_num_elements: int = 10_000, nbins: int = 64
+    ) -> torch.Tensor:
+        flattened_image = image.flatten()
+        if len(flattened_image) > max_num_elements:
+            indices = torch.randperm(len(flattened_image))[:max_num_elements]
+            flattened_image = flattened_image[indices]
+        thresholds = threshold_multiotsu(flattened_image.cpu().numpy(), num_classes, nbins=nbins)  # type: ignore
+        return torch.tensor(thresholds, device=image.device)
+
+    def apply_threshold(self, image: torch.Tensor, num_classes: int, kernel_size: int) -> torch.Tensor:
+        thresholds = self.threshold_multiotsu(image, num_classes)
+        thresholded = (image > thresholds[0]) & (image < thresholds[2])
+        eroded = self.binary_erosion(thresholded.float(), kernel_size=kernel_size)
+        return eroded
+
+    def to_flat_greyscale(self, image: torch.Tensor) -> torch.Tensor:
+        image = image.float()
+        if image.ndim == 4:
+            image = rgb_to_grayscale(image.squeeze(0)).squeeze(0)
+        elif image.ndim == 3:
+            image = rgb_to_grayscale(image).squeeze(0)
+        return (image - image.min()) / (image.max() - image.min())
+
+    def combine_binary_maps(self, binary1: NDArray[Any], binary2: NDArray[Any]) -> NDArray[Any]:
+        combined: NDArray[Any] = binary1 & binary2
+        if combined.sum() == 0:
+            combined = binary1
+        return combined
+
+    def blur(self, image: torch.Tensor, kernel_size: int) -> torch.Tensor:
+        blurred = avg_pool2d(
+            image.unsqueeze(0).unsqueeze(0), kernel_size, stride=kernel_size // 4, padding=kernel_size // 2
+        )
+        interpolated: torch.Tensor = torch.nn.functional.interpolate(blurred, size=image.shape[-2:]).squeeze()
+        return interpolated
+
     def binarize(self, image: torch.Tensor) -> torch.Tensor:
         """
-        Normalizes image to compensate for uneven lighting, then binarizes image by applying a two-sided threshold.
+        Processes image to compensate for uneven lighting, then binarizes image.
         Lastly, removes clutter and skeletonizes the image to preserve grid-like structures.
 
         Args:
@@ -294,28 +357,25 @@ class PerspectiveDetector:
             torch.Tensor: The binarized image tensor with shape [H, W].
         """
         device = image.device
-        if image.ndim == 3:
-            flat_image = image.float().mean(0)
-        else:
-            flat_image = image.float()
 
-        blurred = avg_pool2d(flat_image.unsqueeze(0).unsqueeze(0), 35, stride=1, padding=17).squeeze()
-        differenced = flat_image - blurred
+        image = self.to_flat_greyscale(image)
 
-        local_minima_candidates: torch.Tensor = differenced < self.quantile(differenced, 0.1)
+        blurred = self.blur(image, kernel_size=35)
+        subtracted = blurred - image
+        divided = (image / blurred.clamp(0.01)).cpu()
+
+        local_minima_candidates: torch.Tensor = subtracted > self.quantile(subtracted, 0.75)
 
         local_minima_candidates_np = remove_small_objects(
-            local_minima_candidates.cpu().numpy(), min_size=64, connectivity=2
+            local_minima_candidates.cpu().numpy(), min_size=256, connectivity=2
         )  # type: ignore
-        local_minima_candidates = torch.tensor(local_minima_candidates_np, dtype=torch.bool).to(device)
 
-        flat_image_np = (flat_image / blurred).detach().cpu().numpy()
-        thresholds = threshold_multiotsu(flat_image_np, 4)  # type: ignore
-        flat_image_np = (flat_image_np > thresholds[0]) & (flat_image_np < thresholds[1])
-        flat_image_np = remove_small_objects(flat_image_np, min_size=16, connectivity=2)  # type: ignore
-        flat_image_np = skeletonize(flat_image_np)  # type: ignore
-        binary_image: torch.Tensor = torch.tensor(flat_image_np, dtype=torch.bool).to(device)
-        return binary_image & local_minima_candidates
+        thresholded = self.apply_threshold(divided, num_classes=4, kernel_size=15)
+
+        binarized_image_np = self.combine_binary_maps(local_minima_candidates_np, thresholded.numpy())
+
+        binarized_image: torch.Tensor = torch.tensor(skeletonize(binarized_image_np), dtype=torch.bool)  # type: ignore
+        return binarized_image.to(device)
 
     def calculate_line_variances(self, accumulator: torch.Tensor) -> torch.Tensor:
         """

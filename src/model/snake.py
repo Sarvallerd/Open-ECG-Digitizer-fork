@@ -179,8 +179,13 @@ class Snake(torch.nn.Module):
         nonzero_preds = (preds > 0).sum(0)
         peaks = preds.argsort(dim=0, stable=True, descending=True).float()
 
-        first_index = (nonzero_preds == self.num_peaks).nonzero(as_tuple=True)[0][0]
-        last_index = (nonzero_preds == self.num_peaks).nonzero(as_tuple=True)[0][-1]
+        matching_num_peaks = (nonzero_preds == self.num_peaks).nonzero(as_tuple=True)[0]
+        if len(matching_num_peaks) >= 2:
+            first_index = matching_num_peaks[0]
+            last_index = matching_num_peaks[-1]
+        else:  # sets nan values everywhere
+            first_index = torch.tensor(-1)
+            last_index = torch.tensor(0)
 
         for i in range(peaks.shape[1]):
             if nonzero_preds[i] != self.num_peaks:
