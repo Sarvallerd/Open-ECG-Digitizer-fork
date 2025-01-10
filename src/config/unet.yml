@@ -81,6 +81,7 @@ DATALOADER:
     batch_size: 1
     shuffle: False
     num_workers: 3
+    pin_memory: True
 
 DATASET:
   class_path: 'src.dataset.ecg_scan.ECGScanDataset'
