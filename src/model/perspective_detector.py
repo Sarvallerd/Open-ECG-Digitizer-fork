@@ -276,7 +276,8 @@ class PerspectiveDetector:
 
         H, W = image.shape[-2:]
         destination_points = [[0.0, 0.0], [W, 0.0], [W, H], [0.0, H]]
-        corrected: torch.Tensor = perspective(image, source_points.tolist(), destination_points)
+        fill_value = image.median().item()
+        corrected: torch.Tensor = perspective(image, source_points.tolist(), destination_points, fill=fill_value)
 
         if len(original_shape) == 4:
             return corrected
@@ -302,12 +303,6 @@ class PerspectiveDetector:
             flattened_tensor = flattened_tensor[indices]
         return torch.quantile(flattened_tensor, q)
 
-    def binary_erosion(self, image: torch.Tensor, kernel_size: int = 15) -> torch.Tensor:
-        convolved = avg_pool2d(
-            image.unsqueeze(0).unsqueeze(0), kernel_size, stride=1, padding=kernel_size // 2
-        ).squeeze()
-        return convolved >= 0.9
-
     def threshold_multiotsu(
         self, image: torch.Tensor, num_classes: int, max_num_elements: int = 10_000, nbins: int = 64
     ) -> torch.Tensor:
@@ -320,9 +315,8 @@ class PerspectiveDetector:
 
     def apply_threshold(self, image: torch.Tensor, num_classes: int, kernel_size: int) -> torch.Tensor:
         thresholds = self.threshold_multiotsu(image, num_classes)
-        thresholded = (image > thresholds[0]) & (image < thresholds[2])
-        eroded = self.binary_erosion(thresholded.float(), kernel_size=kernel_size)
-        return eroded
+        thresholded = (image > thresholds[0]) & (image < thresholds[-1])
+        return thresholded
 
     def to_flat_greyscale(self, image: torch.Tensor) -> torch.Tensor:
         image = image.float()
@@ -339,9 +333,7 @@ class PerspectiveDetector:
         return combined
 
     def blur(self, image: torch.Tensor, kernel_size: int) -> torch.Tensor:
-        blurred = avg_pool2d(
-            image.unsqueeze(0).unsqueeze(0), kernel_size, stride=kernel_size // 4, padding=kernel_size // 2
-        )
+        blurred = avg_pool2d(image.unsqueeze(0).unsqueeze(0), kernel_size, stride=kernel_size // 8, padding=0)
         interpolated: torch.Tensor = torch.nn.functional.interpolate(blurred, size=image.shape[-2:]).squeeze()
         return interpolated
 
