@@ -1,18 +1,29 @@
 MODEL:
   class_path: 'src.model.unet.UNet'
   KWARGS:
-    in_chans: 3
-    out_channel: 3
+    num_in_channels: 3
+    num_out_channels: 3
     dims: [8, 32, 64, 64, 128, 128]
-    depths: [2, 2, 2, 2, 2, 2]
+    depth: 2
 
 TRAIN:
   COMPILE: True
   CUDNN_BENCHMARK: False
+  LR_SCHEDULER:
+    class_path: 'src.utils.CosineToConstantLR'
+    KWARGS:
+      T_max: 2000
+      eta_min_divisor: 10.0
+  STOPPER:
+    class_path: 'src.utils.EarlyStopper'
+    KWARGS:
+      metric: 'val_loss'
+      patience: 1
+      delta: 0
   OPTIMIZER:
     class_path: 'torch.optim.AdamW'
     KWARGS:
-      lr: 0.0003
+      lr: 0.001
   MIXED_PRECISION_SCALER:
     class_path: 'torch.amp.GradScaler'
     KWARGS: {}
@@ -21,39 +32,63 @@ TRAIN:
     KWARGS:
       alpha: 1.0
   KWARGS:
-    epochs: 10
+    epochs: 1000
     metrics: []
     device: 'cuda:0'
     metrics:
       -
         class_path: 'src.loss.loss.MulticlassBinaryCrossEntropyLoss'
         fit: false
+        KWARGS: {}
+      -
+        class_path: 'src.loss.loss.MulticlassBinaryDiceLoss'
+        fit: false
+        KWARGS: {}
+      -
+        class_path: 'src.loss.loss.MulticlassBinaryDiceLoss'
+        fit: false
+        KWARGS:
+          union_exponent: 2.0
 
 HYPERPARAMETER_SEARCH:
-  SCHEDULER:
-    class_path: 'ray.tune.schedulers.ASHAScheduler'
-    KWARGS:
-      metric: 'val_loss'
-      mode: 'min'
-      max_t: 3000
-      grace_period: 20
-      reduction_factor: 4
   SEARCH_SPACE:
     MODEL:
       KWARGS:
         dims:
           SAMPLE_TYPE: 'ray.tune.grid_search'
-          VALUES: [[8, 32, 64, 64, 128, 128]]
-        depths:
+          KWARGS:
+            values: [[8, 32, 64, 64, 128, 128]]
+        depth:
           SAMPLE_TYPE: 'ray.tune.grid_search'
-          VALUES: [[2, 2, 2, 2, 2, 2]]
+          KWARGS:
+            values: [2, 4]
+    TRAIN:
+      OPTIMIZER:
+        KWARGS:
+          lr:
+            SAMPLE_TYPE: 'ray.tune.grid_search'
+            KWARGS:
+              values: [1e-3, 1e-4, 1e-5]
+      CRITERION:
+        class_path:
+          SAMPLE_TYPE: 'ray.tune.grid_search'
+          KWARGS:
+            values: ['src.loss.loss.WeightedDiceLoss', 'src.loss.loss.WeightedCrossEntropyLoss']
+        KWARGS:
+          alpha:
+            SAMPLE_TYPE: 'ray.tune.grid_search'
+            KWARGS:
+              values: [1.0, 2.0, 10.0]
 
 DATALOADER:
   class_path: 'torch.utils.data.DataLoader'
   KWARGS:
     batch_size: 1
     shuffle: False
-    num_workers: 3
+    num_workers: 2
+    pin_memory: True
+    pin_memory_device: 'cuda:0'
+    prefetch_factor: 2
 
 DATASET:
   class_path: 'src.dataset.ecg_scan.ECGScanDataset'
@@ -62,14 +97,12 @@ DATASET:
     KWARGS:
       ecg_scan_path: '/data/ecg_dataset/ecg_scans/train_transformed'
       ecg_mask_path: '/data/ecg_dataset/ecg_masks/train_transformed'
-      load_n: 50
   VAL:
     KWARGS:
       ecg_scan_path: '/data/ecg_dataset/ecg_scans/val_transformed'
       ecg_mask_path: '/data/ecg_dataset/ecg_masks/val_transformed'
-      load_n: 3
+      load_n: 20
   TEST:
     KWARGS:
       ecg_scan_path: '/data/ecg_dataset/ecg_scans/test'
       ecg_mask_path: '/data/ecg_dataset/ecg_masks/test'
-      load_n: 1

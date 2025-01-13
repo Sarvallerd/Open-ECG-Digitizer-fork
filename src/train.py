@@ -12,6 +12,8 @@ import ray
 import tempfile
 import torch
 import os
+import multiprocessing
+import torch._dynamo
 
 
 def run_epoch(
@@ -20,11 +22,16 @@ def run_epoch(
     dataloader: torch.utils.data.DataLoader[Any],
     optimizer: Optional[torch.optim.Optimizer] = None,
     mixed_precision_scaler: Optional[torch.amp.grad_scaler.GradScaler] = None,
+    lr_scheduler: Optional[torch.optim.lr_scheduler.LRScheduler] = None,
     eval: bool = False,
     epoch: Optional[int] = None,
     max_epochs: Optional[int] = None,
     device: str | torch.device = "cpu",
-) -> Tuple[float, int, List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]:
+    return_epoch_data: bool = True,
+    metric_instances: Optional[List[nn.Module]] = None,
+) -> Tuple[
+    float, int, List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], Dict[str, float]
+]:
     if not eval and optimizer is None:
         raise ValueError("Optimizer must be provided for training (eval=False).")
 
@@ -43,6 +50,10 @@ def run_epoch(
     targets = []
     progress_bar = tqdm(dataloader)
 
+    dataset_split = "train" if not eval else "val"
+    metrics = metric_instances or []
+    stored_metrics: Dict[str, List[torch.Tensor]] = {f"{dataset_split}_{metric.__name__}": [] for metric in metrics}
+
     for predictors, target in progress_bar:
         with torch.set_grad_enabled(not eval):
             if optimizer:
@@ -51,18 +62,21 @@ def run_epoch(
             target = target.to(device)
             with torch.autocast(device_type=str(device), enabled=mixed_precision_scaler is not None):
                 output = model(predictors)
-                predictions.append(output.detach().cpu())
-                targets.append(target.detach().cpu())
 
-                with torch.no_grad():
-                    if hasattr(model, "extract_embeddings"):
-                        embeddings.append(model.extract_embeddings(predictors))
+                if return_epoch_data:
+                    predictions.append(output.detach().cpu())
+                    targets.append(target.detach().cpu())
+
+                    with torch.no_grad():
+                        if hasattr(model, "extract_embeddings"):
+                            embeddings.append(model.extract_embeddings(predictors))
 
                 loss = criterion(output, target)
 
                 if eval:
-                    pass
-                elif mixed_precision_scaler:
+                    continue
+
+                if mixed_precision_scaler:
                     mixed_precision_scaler.scale(loss).backward()
                     mixed_precision_scaler.step(optimizer)  # type: ignore
                     mixed_precision_scaler.update()
@@ -70,13 +84,23 @@ def run_epoch(
                     loss.backward()
                     optimizer.step()  # type: ignore
 
+                if lr_scheduler:
+                    lr_scheduler.step()
+
+                for metric in metrics:
+                    metric = metric(output, target)
+                    stored_metrics[f"{dataset_split}_{metric.__name__}"].append(metric.float().numpy())
+
             total_loss += loss.item()
             num_cases += predictors.shape[0]
 
             if epoch:
                 max_epochs_str = f"/{max_epochs}" if max_epochs else ""
                 progress_bar.set_description(f"Epoch {epoch + 1}{max_epochs_str}, Loss: {total_loss / num_cases:.4f}")
-    return total_loss, num_cases, predictors, embeddings, predictions, targets
+
+    calculated_metrics: Dict[str, float] = {key: float(np.mean(value)) for key, value in stored_metrics.items()}
+
+    return total_loss, num_cases, predictors, embeddings, predictions, targets, calculated_metrics
 
 
 def train(
@@ -86,6 +110,7 @@ def train(
     val_dataloader: torch.utils.data.DataLoader[Any],
     optimizer: torch.optim.Optimizer,
     mixed_precision_scaler: Optional[torch.amp.grad_scaler.GradScaler],
+    lr_scheduler: Optional[torch.optim.lr_scheduler.LRScheduler],
     use_ray: bool,
     epochs: int,
     metrics: Dict[Any, Any],
@@ -106,30 +131,32 @@ def train(
 
     for metric in metrics:
         if metric.get("fit", False):
-            metric_class = import_class_from_path(metric["class_path"])()
+            metric_class = import_class_from_path(metric["class_path"])(**metric["KWARGS"])
             metric_class.fit(train_dataloader.dataset.data)  # type: ignore
         else:
-            metric_class = import_class_from_path(metric["class_path"])()
+            metric_class = import_class_from_path(metric["class_path"])(**metric["KWARGS"])
         metrics_instances.append(metric_class)
 
     best_metrics = {metric.__name__: -np.inf for metric in metrics_instances}
     lowest_val_loss = np.inf
 
     for epoch in range(num_epochs):
-        train_loss, train_cases, _, _, train_predictions, train_targets = run_epoch(
+        train_loss, train_cases, _, _, _, _, train_metrics = run_epoch(
             model,
             criterion,
             train_dataloader,
             optimizer,
             mixed_precision_scaler=mixed_precision_scaler,
+            lr_scheduler=lr_scheduler,
             eval=False,
             epoch=epoch,
             max_epochs=num_epochs,
             device=device,
+            return_epoch_data=False,
         )
         running_train_losses.append(train_loss / train_cases)
 
-        val_loss, val_cases, _, _, val_predictions, val_targets = run_epoch(
+        val_loss, val_cases, _, _, _, _, val_metrics = run_epoch(
             model,
             criterion,
             val_dataloader,
@@ -139,23 +166,19 @@ def train(
             epoch=epoch,
             max_epochs=num_epochs,
             device=device,
+            return_epoch_data=False,
         )
 
         running_val_losses.append(val_loss / val_cases)
 
-        calculated_metrics = {}
+        calculated_metrics = train_metrics | val_metrics
         curr_val_loss = val_loss / val_cases
         is_new_best_metric = curr_val_loss < lowest_val_loss
         lowest_val_loss = min(curr_val_loss, lowest_val_loss)
 
-        for metric in metrics_instances:
-            name = metric.__name__
-            train_metric = metric(train_predictions, train_targets)
-            val_metric = metric(val_predictions, val_targets)
-            calculated_metrics[f"train_{name}"] = train_metric.float().numpy()
-            calculated_metrics[f"val_{name}"] = val_metric.float().numpy()
-            if val_metric > best_metrics[name]:
-                best_metrics[name] = val_metric
+        for name, value in val_metrics.items():
+            if value < best_metrics[name]:
+                best_metrics[name] = value
                 is_new_best_metric = True
 
         results = {"train_loss": train_loss / train_cases, "val_loss": curr_val_loss} | calculated_metrics
@@ -197,6 +220,11 @@ def load_and_train(ray_config: CN, config: CN) -> None:
         if hasattr(config.TRAIN, "MIXED_PRECISION_SCALER")
         else None
     )
+    lr_scheduler = (
+        import_class_from_path(config.TRAIN.LR_SCHEDULER.class_path)(optimizer, **config.TRAIN.LR_SCHEDULER.KWARGS)
+        if hasattr(config.TRAIN, "LR_SCHEDULER")
+        else None
+    )
     criterion = import_class_from_path(config.TRAIN.CRITERION.class_path)()
     train_dataloader, val_dataloader, test_dataloder = get_data_loaders(config.DATASET, config.DATALOADER.KWARGS)
 
@@ -217,6 +245,7 @@ def load_and_train(ray_config: CN, config: CN) -> None:
         val_dataloader,
         optimizer,
         mixed_precision_scaler=mixed_precision_scaler,
+        lr_scheduler=lr_scheduler,
         use_ray=bool(ray_config),
         **config.TRAIN.KWARGS,
     )
@@ -224,16 +253,16 @@ def load_and_train(ray_config: CN, config: CN) -> None:
     return None
 
 
-def load_hyperparameter_search(config: CN) -> Any | CN:
+def load_hyperparameter_search(config: CN) -> Any | Dict[str, Any]:
     # TODO: Add support for nested and conditional spaces (https://docs.ray.io/en/latest/tune/faq.html#nested-spaces).
     if "SAMPLE_TYPE" in config:
-        return import_class_from_path(config["SAMPLE_TYPE"])(config["VALUES"])
+        return import_class_from_path(config["SAMPLE_TYPE"])(**config["KWARGS"])
 
-    parsed_config = CN()
+    parsed_config = {}
     for key, value in config.items():
-        if isinstance(value, CN):
+        if isinstance(value, dict):
             parsed_config[key] = load_hyperparameter_search(value)
-    return CN(parsed_config)
+    return parsed_config
 
 
 def main(config: CN) -> Optional[ExperimentAnalysis]:
@@ -242,21 +271,36 @@ def main(config: CN) -> Optional[ExperimentAnalysis]:
         return load_and_train(None, config)  # type: ignore
 
     ray_config = load_hyperparameter_search(config.HYPERPARAMETER_SEARCH.SEARCH_SPACE)
-    scheduler = import_class_from_path(config.HYPERPARAMETER_SEARCH.SCHEDULER.class_path)(
-        **config.HYPERPARAMETER_SEARCH.SCHEDULER.KWARGS
+    scheduler = (
+        import_class_from_path(config.HYPERPARAMETER_SEARCH.SCHEDULER.class_path)(
+            **config.HYPERPARAMETER_SEARCH.SCHEDULER.KWARGS
+        )
+        if "SCHEDULER" in config.HYPERPARAMETER_SEARCH
+        else None
     )
+    stopper = (
+        import_class_from_path(config.TRAIN.STOPPER.class_path)(**config.TRAIN.STOPPER.KWARGS)
+        if "STOPPER" in config.TRAIN
+        else None
+    )
+
+    # Set seed for Ray Tune's random search. If you remove this line, you will
+    # get different configurations each time you run the script.
+    np.random.seed(42)
 
     result = ray.tune.run(
         partial(load_and_train, config=config),
-        resources_per_trial={"cpu": 2, "gpu": 1},
+        resources_per_trial={"cpu": 4, "gpu": 1},
         config=ray_config,
         num_samples=1,
         scheduler=scheduler,
+        stop=stopper,
     )
     return result  # type: ignore
 
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method("spawn", force=True)  # CUDA does not support "fork", which is default on linux.
     cfg = get_cfg("src/config/unet.yml")
     main(cfg)
     print(cfg)

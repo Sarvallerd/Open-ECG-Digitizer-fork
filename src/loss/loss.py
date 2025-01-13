@@ -1,37 +1,99 @@
 from torch import nn
 from torch.nn import functional as F
-from typing import List
+from typing import Any, Dict, List, Optional
 import torch
 
 
 SIGNAL_CLASS: int = 2
 
 
-class WeightedDiceLoss(nn.Module):
-    def __init__(self, alpha: float = 1.0, signal_class: int = SIGNAL_CLASS) -> None:
+class MulticlassBinaryLoss(nn.Module):
+    def __init__(
+        self, multiclass_loss: type[nn.Module], signal_class: int = SIGNAL_CLASS, **multiclass_loss_kwargs: Any
+    ) -> None:
         """
         Args:
             alpha (float): Extra weight assigned to the signal class.
             signal_class (int, optional): The class that is considered the signal class.
         """
+        super(MulticlassBinaryLoss, self).__init__()
+        self.signal_class: int = signal_class
+        self.multiclass_loss_kwargs: Dict[Any, Any] = multiclass_loss_kwargs
+        self.binary_signal_class: int = 0  # As this class collapses the problem to binary classification.
+        self.multiclass_loss_obj = multiclass_loss(signal_class=self.binary_signal_class, **multiclass_loss_kwargs)
+
+    def forward(
+        self, pred: torch.Tensor | List[torch.Tensor], target_one_hot: torch.Tensor | List[torch.Tensor]
+    ) -> torch.Tensor:
+        if type(pred) is not type(target_one_hot):
+            raise ValueError("Pred and target_one_hot must be of the same type.")
+
+        if isinstance(pred, torch.Tensor) and isinstance(target_one_hot, torch.Tensor):
+            return self.compute_multiclass_binary_loss(pred, target_one_hot)
+
+        total_loss = 0.0
+        for curr_pred, curr_target_one_hot in zip(pred, target_one_hot):
+            total_loss += self.compute_multiclass_binary_loss(curr_pred, curr_target_one_hot)  # type: ignore
+        loss: torch.Tensor = total_loss / len(pred)  # type: ignore
+        return loss
+
+    def compute_multiclass_binary_loss(self, pred: torch.Tensor, target_one_hot: torch.Tensor) -> torch.Tensor:
+        pred_signal = pred[:, self.signal_class, :, :].unsqueeze(1)
+        prob_signal = F.softmax(pred, dim=1)[:, self.signal_class, :, :].unsqueeze(1)
+        target_one_hot_signal = target_one_hot[:, self.binary_signal_class, :, :].unsqueeze(1)
+        loss: torch.Tensor = self.multiclass_loss_obj(pred_signal, target_one_hot_signal, probs=prob_signal)
+        return loss
+
+
+class WeightedDiceLoss(nn.Module):
+    def __init__(self, alpha: float = 1.0, signal_class: int = SIGNAL_CLASS, union_exponent: int = 1) -> None:
+        """
+        Args:
+            alpha (float): Extra weight assigned to the signal class.
+            signal_class (int, optional): The class that is considered the signal class.
+            union_exponent (int, optional): The exponent to raise the union to. Set to 2 to match the loss
+                function for V-Net.
+        """
         super(WeightedDiceLoss, self).__init__()
         self.alpha: float = alpha
         self.signal_class: int = signal_class
+        self.union_exponent: int = union_exponent
 
-    def forward(self, pred: torch.Tensor, target_one_hot: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
-        pred_probs: torch.Tensor = F.softmax(pred, dim=1)
+    def forward(
+        self, pred: torch.Tensor, target_one_hot: torch.Tensor, eps: float = 1e-6, probs: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        if bool(probs is not None) != bool(target_one_hot.shape[1] == 1):
+            raise ValueError("If probs is provided, the targets must be binary and vice versa.")
+        is_binary = probs is not None
 
-        intersection: torch.Tensor = torch.sum(pred_probs * target_one_hot, dim=(0, 2, 3))
-        union: torch.Tensor = torch.sum(pred_probs, dim=(0, 2, 3)) + torch.sum(target_one_hot, dim=(0, 2, 3))
-        dice: torch.Tensor = 1 - (2 * intersection + eps) / (union + eps)
+        pred_probs: torch.Tensor = F.softmax(pred, dim=1) if not is_binary else probs  # type: ignore
 
-        multiplier: torch.Tensor = torch.ones_like(dice).to(target_one_hot.device)
-        multiplier[self.signal_class] = self.alpha
-        multiplier /= multiplier.sum()
+        # Must cast to double in order to avoid overflow.
+        intersection: torch.Tensor = torch.sum(pred_probs.double() * target_one_hot.double(), dim=(2, 3))
+        union: torch.Tensor = torch.sum(pred_probs.double().pow(self.union_exponent), dim=(2, 3)) + torch.sum(
+            target_one_hot.double().pow(self.union_exponent), dim=(2, 3)
+        )
+        dice: torch.Tensor = 1 - (2 * intersection) / (union + eps)
 
-        dice = dice * multiplier
+        if not is_binary:
+            multiplier: torch.Tensor = torch.ones_like(dice).to(target_one_hot.device)
+            multiplier[:, self.signal_class] = self.alpha
+            multiplier /= multiplier.mean()
+
+            dice = dice * multiplier
 
         return dice.mean()
+
+
+class MulticlassBinaryDiceLoss(MulticlassBinaryLoss):
+    def __init__(self, alpha: float = 1.0, signal_class: int = SIGNAL_CLASS, union_exponent: int = 1) -> None:
+        super(MulticlassBinaryDiceLoss, self).__init__(
+            WeightedDiceLoss, signal_class, alpha=alpha, union_exponent=union_exponent
+        )
+
+    @property
+    def __name__(self) -> str:
+        return "multiclass_binary_dice_loss"
 
 
 class WeightedCrossEntropyLoss(nn.Module):
@@ -46,45 +108,34 @@ class WeightedCrossEntropyLoss(nn.Module):
         self.alpha: float = alpha
         self.signal_class: int = signal_class
 
-    def forward(self, pred: torch.Tensor, target_one_hot: torch.Tensor) -> torch.Tensor:
-        prob: torch.Tensor = F.softmax(pred, dim=1)
-        log_prob: torch.Tensor = F.log_softmax(pred, dim=1)
+    def forward(
+        self, pred: torch.Tensor, target_one_hot: torch.Tensor, probs: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        if bool(probs is not None) != bool(target_one_hot.shape[1] == 1):
+            raise ValueError("If probs is provided, the targets must be binary and vice versa.")
+        is_binary = probs is not None
 
-        loss: torch.Tensor = -torch.sum(log_prob * target_one_hot, dim=1)
+        prob: torch.Tensor = F.softmax(pred, dim=1) if not is_binary else probs  # type: ignore
+
+        if is_binary:
+            binary_loss: torch.Tensor = nn.BCEWithLogitsLoss()(pred, target_one_hot)
+            return binary_loss
+
         with torch.no_grad():
             w = 1 + (target_one_hot[:, self.signal_class] + prob[:, self.signal_class]) * (self.alpha - 1)
             w = w / w.mean()
+
+        log_prob: torch.Tensor = F.log_softmax(pred, dim=1)
+
+        loss: torch.Tensor = -torch.sum(log_prob * target_one_hot, dim=1)
         loss = w * loss
 
         return loss.mean()
 
 
-class MulticlassBinaryCrossEntropyLoss(nn.Module):
-    def __init__(self, signal_class: int = -1) -> None:
-        super(MulticlassBinaryCrossEntropyLoss, self).__init__()
-        self.signal_class: int = signal_class
-
-    def forward(
-        self, pred: torch.Tensor | List[torch.Tensor], target_one_hot: torch.Tensor | List[torch.Tensor]
-    ) -> torch.Tensor:
-        if type(pred) is not type(target_one_hot):
-            raise ValueError("Pred and target_one_hot must be of the same type.")
-
-        if isinstance(pred, torch.Tensor) and isinstance(target_one_hot, torch.Tensor):
-            loss = self.compute_loss(pred, target_one_hot, self.signal_class)
-        else:
-            loss = 0.0  # type: ignore
-            for i in range(len(pred)):
-                loss += self.compute_loss(pred[i], target_one_hot[i], self.signal_class)
-            loss /= len(pred)
-        return loss
-
-    @staticmethod
-    def compute_loss(pred: torch.Tensor, target_one_hot: torch.Tensor, signal_class: int) -> torch.Tensor:
-        prob: torch.Tensor = F.softmax(pred, dim=1)
-        signal_prob: torch.Tensor = prob[:, signal_class, :, :]
-        loss: torch.Tensor = nn.BCELoss()(signal_prob, target_one_hot[:, signal_class, :, :].type_as(signal_prob))
-        return loss
+class MulticlassBinaryCrossEntropyLoss(MulticlassBinaryLoss):
+    def __init__(self, alpha: float = 1.0, signal_class: int = SIGNAL_CLASS) -> None:
+        super(MulticlassBinaryCrossEntropyLoss, self).__init__(WeightedCrossEntropyLoss, signal_class, alpha=alpha)
 
     @property
     def __name__(self) -> str:
