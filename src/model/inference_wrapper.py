@@ -22,7 +22,6 @@ class InferenceWrapper(torch.nn.Module):
         self.snake = self._load_snake()
         self.perspective_detector = self._load_perspective_detector()
         self.segmentation_model = self._load_segmentation_model().to(self.device)
-        self.amp_arg = "cuda" if device.startswith("cuda") else "cpu"
 
     @torch.no_grad()
     def forward(self, image: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -45,7 +44,7 @@ class InferenceWrapper(torch.nn.Module):
             "image": image.cpu(),
             "image_aligned": image_aligned.cpu(),
             "signal_probabilities_aligned": signal_probabilities_aligned.cpu(),
-            "snake": self.snake().detach(),
+            "snake": self.snake.snake.data.detach(),
         }
         return out_dict
 
@@ -79,7 +78,9 @@ class InferenceWrapper(torch.nn.Module):
         return segmentation_model
 
     def _load_segmentation_model_weights(self, segmentation_model: torch.nn.Module) -> None:
-        checkpoint = torch.load(self.config.SEGMENTATION_MODEL.weight_path, weights_only=True)[0]
+        checkpoint = torch.load(
+            self.config.SEGMENTATION_MODEL.weight_path, weights_only=True, map_location=self.device
+        )[0]
         segmentation_model.load_state_dict(checkpoint)
 
     def _check_image_dimensions(self, image: torch.Tensor) -> None:

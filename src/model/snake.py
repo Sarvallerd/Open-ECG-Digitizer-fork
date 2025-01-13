@@ -1,4 +1,5 @@
 import torch
+import torchvision
 
 
 def filter_local_maxima(preds: torch.Tensor, distance: int) -> torch.Tensor:
@@ -62,6 +63,9 @@ class Snake(torch.nn.Module):
     def __init__(
         self,
         num_peaks: int = 6,
+        autodetect_num_peaks: bool = False,
+        autodetect_num_peaks_min: int = 3,
+        autodetect_num_peaks_max: int = 6,
         min_distance: int = 45,
         left_percentile: float = 0.01,
         right_percentile: float = 0.99,
@@ -89,6 +93,9 @@ class Snake(torch.nn.Module):
         """
         super(Snake, self).__init__()
         self.num_peaks = num_peaks
+        self.autodetect_num_peaks = autodetect_num_peaks
+        self.autodetect_num_peaks_min = autodetect_num_peaks_min
+        self.autodetect_num_peaks_max = autodetect_num_peaks_max
         self.min_distance = min_distance
         self.left_percentile = left_percentile
         self.right_percentile = right_percentile
@@ -107,6 +114,8 @@ class Snake(torch.nn.Module):
             preds (torch.Tensor): A 2D tensor of predictions, with values of magnitude within (0,1).
         """
         self.cropped_preds = self._crop_preds(preds)
+        if self.autodetect_num_peaks:
+            self._autodetect_num_peaks()
         self.snake = torch.nn.Parameter(self._initialize_snake()).to(preds.device)
         if self.interpolate_missing:
             self._interpolate_missing_chunks()
@@ -217,6 +226,7 @@ class Snake(torch.nn.Module):
         return peaks[: self.num_peaks]
 
     def _interpolate_missing_chunks(self) -> None:
+        self._postprocess_initialization()
         chunks = self._find_contiguous_chunks()
         snake_interpolation = torch.full_like(self.snake.data, torch.nan)
         all_invalid_indices = torch.isnan(self.snake.data).any(0)
@@ -254,6 +264,41 @@ class Snake(torch.nn.Module):
                     snake_interpolation[:, chunk] -= diff[:, None]
 
         self.snake.data[torch.isnan(self.snake.data)] = snake_interpolation[torch.isnan(self.snake.data)]
+
+    def _postprocess_initialization(self) -> None:
+        """Sets values in the snake.data tensor to nan if they are more than halfway towards the next channel median."""
+        channel_medians = torch.nanmedian(self.snake.data, dim=1).values
+        diff = channel_medians.diff().abs().mean().item()
+        for c in range(self.snake.data.shape[0]):
+            self.snake.data[c][(self.snake.data[c] - channel_medians[c]).abs() > diff / 2] = torch.nan
+
+    def _autodetect_num_peaks(self) -> None:
+        """Projects the cropped_preds tensor by summation, smooths the projection and sets number of peaks based on number of local maxima."""
+        preds_copy = self.cropped_preds.clone()
+        preds_copy[preds_copy < 2 * preds_copy.max() / 3] = 0
+        projected_preds = preds_copy.pow(2).sum(1, keepdim=True)
+        first, last = projected_preds.nonzero(as_tuple=True)[0][[0, -1]]
+        projected_preds = projected_preds[first : last + 1]
+        base_kernel_size = projected_preds.shape[0] // 3
+        if not base_kernel_size % 2:
+            base_kernel_size += 1
+        projected_preds = torch.nn.functional.pad(
+            projected_preds, (0, 0, base_kernel_size // 4, base_kernel_size // 4), value=projected_preds.min().item()
+        )
+        blurred_preds = torchvision.transforms.functional.gaussian_blur(
+            projected_preds.unsqueeze(0).unsqueeze(0),
+            kernel_size=(1, base_kernel_size),
+            sigma=(1, base_kernel_size // 8 + 1),
+        ).squeeze()
+
+        # count the number of local maxima
+        max_pooled = torch.nn.functional.max_pool1d(
+            blurred_preds.unsqueeze(0).unsqueeze(0), kernel_size=3, stride=1, padding=1
+        ).squeeze()
+        max_indices = (blurred_preds == max_pooled).nonzero(as_tuple=True)[0]
+        num_peaks = len(max_indices)
+
+        self.num_peaks = min(max(num_peaks, self.autodetect_num_peaks_min), self.autodetect_num_peaks_max)
 
     def forward(self) -> torch.Tensor:
         self.snake.data = torch.sort(self.snake.data, dim=0)[0]
