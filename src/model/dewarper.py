@@ -311,7 +311,7 @@ class Dewarper(torch.nn.Module):
         loss = ((max_diff - target_distance).pow(2) + min_diff.pow(2)).mean().sqrt()
         return loss
 
-    def _plot_positions(self, pos: torch.Tensor, title: str, filename: str, c: np.ndarray | None = None) -> None:  # type: ignore
+    def _plot_positions(self, pos: torch.Tensor, title: str, filename: str, c: np.ndarray | None = None) -> None:
         """
         Plots node positions.
 
