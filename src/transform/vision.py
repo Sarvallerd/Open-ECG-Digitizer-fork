@@ -1,15 +1,18 @@
-import torch
-from torch import nn
-from typing import Tuple, Union, Dict, Any, List
-from src.utils import import_class_from_path
-import torchvision.transforms.functional as F
-import torchvision.transforms as T
-import torchvision.transforms.v2 as T2
-import random
+import math
 import os
+import random
+from typing import Any, Dict, List, Tuple, Union
+
 import matplotlib.pyplot as plt
-from torchvision.transforms.functional import perspective
+import torch
+import torchvision.transforms as T
+import torchvision.transforms.functional as F
+import torchvision.transforms.v2 as T2
+from torch import nn
 from torchvision.io import read_image
+from torchvision.transforms.functional import perspective
+
+from src.utils import import_class_from_path
 
 
 class RandomShiftTextTransform(nn.Module):
@@ -99,6 +102,9 @@ class RandomPerspectiveWithImageTransform(nn.Module):
         self.image_path = image_path
         self.distortion_scale = distortion_scale
         self.image_paths = os.listdir(image_path)
+        assert (
+            len(self.image_paths) > 0
+        ), f"No images found in {image_path}. Please check the path in transform config file."
 
     def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         index: int = int(torch.randint(0, len(self.image_paths), (1,)).item())
@@ -137,28 +143,34 @@ class RandomPerspectiveWithImageTransform(nn.Module):
 class RandomFlipTransform(nn.Module):
     """Randomly flips the image and mask."""
 
-    def __init__(self, p_ud: float = 0.5, p_lr: float = 0.5):
+    def __init__(self, p_ud: float = 0.5, p_lr: float = 0.5, p_tr: float = 0.5):
         super().__init__()
         self.p_ud = p_ud
         self.p_lr = p_lr
+        self.p_tr = p_tr
 
     def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if random.random() < self.p_ud:
             img, mask = F.vflip(img), F.vflip(mask)
         if random.random() < self.p_lr:
             img, mask = F.hflip(img), F.hflip(mask)
+        if random.random() < self.p_tr:
+            img, mask = img.transpose(-1, -2), mask.transpose(-1, -2)
         return img, mask
 
 
 class GaussianBlurTransform(nn.Module):
     """Applies Gaussian blur to the image."""
 
-    def __init__(self, kernel_size: int = 7, sigma: Tuple[float, float] = (10.0, 10.0)):
+    def __init__(self, kernel_size: int = 7, sigma: Tuple[float, float] = (0.0, 10.0), p: float = 0.1) -> None:
         super().__init__()
         self.kernel_size = kernel_size
         self.sigma_range = sigma
+        self.p = p
 
     def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if random.random() > self.p:
+            return img, mask
         sigma = random.uniform(*self.sigma_range)
         img = F.gaussian_blur(img, kernel_size=self.kernel_size, sigma=sigma)
         return img, mask
@@ -270,10 +282,202 @@ class RandomJPEGCompression(nn.Module):
         return img, mask
 
 
+class RandomCrop(nn.Module):
+    """Randomly crops the image and mask to a specified size."""
+
+    def __init__(self, size: Tuple[int, int] = (1024, 1024)):
+        super().__init__()
+        self.size = size
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Crop the image and mask to the specified size."""
+        i, j, h, w = self.get_params(img)
+        img = F.crop(img, i, j, h, w)
+        mask = F.crop(mask, i, j, h, w)
+        return img, mask
+
+    def get_params(self, img: torch.Tensor) -> Tuple[int, int, int, int]:
+        """Get parameters for a random crop."""
+        i = random.randint(0, img.shape[1] - self.size[0])
+        j = random.randint(0, img.shape[2] - self.size[1])
+        h, w = self.size
+        return i, j, h, w
+
+
+class RandomSaturationContrast(nn.Module):
+    def __init__(self, sat_factor: float = 2.5, contrast_factor: float = 2.5):
+        super().__init__()
+        self.sat_factor = sat_factor
+        self.contrast_factor = contrast_factor
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        # sat factor is a random number between 1 and self.sat_factor
+        sat_factor = random.uniform(1.0, self.sat_factor)
+        contrast_factor = random.uniform(1.0, self.contrast_factor)
+
+        # Compute grayscale image
+        gray = img.mean(dim=-3, keepdims=True)  # type: ignore
+
+        # Adjust saturation
+        img = gray + (img - gray) * sat_factor
+        img = torch.clamp(img, 0.0, 1.0)
+
+        # Adjust contrast
+        img = (img - 0.5) * contrast_factor + 0.5
+        img = torch.clamp(img, 0.0, 1.0)
+
+        return img, mask
+
+
+class RandomLine(nn.Module):
+    """Randomly draws a solid color line over the image tensor."""
+
+    def __init__(self, p: float = 0.5, max_line_width: int = 50):
+        super().__init__()
+        self.p = p
+        self.max_line_width = max_line_width
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if random.random() > self.p:
+            return img, mask
+
+        C, H, W = img.shape
+        device = img.device
+
+        # Random angle and center point
+        theta = random.uniform(0, 2 * math.pi)
+        cx = random.randint(0, W - 1)
+        cy = random.randint(0, H - 1)
+
+        # Line extent
+        line_len = int(math.hypot(H, W))
+        dx = int(math.cos(theta) * line_len)
+        dy = int(math.sin(theta) * line_len)
+
+        x0 = cx - dx // 2
+        y0 = cy - dy // 2
+        x1 = cx + dx // 2
+        y1 = cy + dy // 2
+
+        # Generate coordinate grid
+        yy, xx = torch.meshgrid(torch.arange(H, device=device), torch.arange(W, device=device), indexing="ij")
+
+        # Vector math
+        line_vec = torch.tensor([x1 - x0, y1 - y0], device=device, dtype=torch.float32)
+        line_len = torch.norm(line_vec)
+        if line_len == 0:
+            return img, mask  # Degenerate line
+
+        px = xx - x0
+        py = yy - y0
+        cross = line_vec[1] * px - line_vec[0] * py
+        dist = torch.abs(cross) / line_len
+
+        # Only within line segment
+        dot = (px * line_vec[0] + py * line_vec[1]) / (line_len**2)
+        within_segment = (dot >= 0) & (dot <= 1)
+
+        # Line width mask
+        line_width = random.randint(1, self.max_line_width)
+        mask_line = (dist <= (line_width / 2)) & within_segment  # (H, W)
+
+        # Assign random color directly to affected pixels
+        color = torch.rand(C, device=device).unsqueeze(-1) * 0.2
+        mask_fill = torch.tensor([0.5, 0.5, 0]).unsqueeze(-1).to(device)
+        img[:, mask_line] = color
+        mask[:, mask_line] = mask_fill
+
+        return img, mask
+
+
+class RandomQRCode(nn.Module):
+    """Randomly overlays a (fake) QR code on the image."""
+
+    def __init__(self, p: float = 0.05, qr_size: int = 20):
+        super().__init__()
+        self.p = p
+        self.qr_size = qr_size
+        self.max_qr_size = qr_size * 16
+
+    def _generate_qr_code(self) -> torch.Tensor:
+        qr = torch.zeros((self.qr_size, self.qr_size), dtype=torch.float32)
+        qr_vals = torch.rand(self.qr_size, self.qr_size) > 0.5
+        qr[qr_vals] = 1.0
+        return qr
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if random.random() > self.p:
+            return img, mask
+        qr = self._generate_qr_code()
+        qr_size = random.randint(self.qr_size, self.max_qr_size)
+        qr = torch.nn.functional.interpolate(qr.unsqueeze(0).unsqueeze(0), (qr_size, qr_size), mode="nearest").squeeze(
+            0
+        )
+        h, w = img.shape[1], img.shape[2]
+        c1 = random.randint(0, h - qr_size)
+        c2 = random.randint(0, w - qr_size)
+        img[:, c1 : c1 + qr_size, c2 : c2 + qr_size] = qr.unsqueeze(0)
+        mask[0, c1 : c1 + qr_size, c2 : c2 + qr_size] = 0.0
+        mask[1, c1 : c1 + qr_size, c2 : c2 + qr_size] = 1 - qr
+        mask[2, c1 : c1 + qr_size, c2 : c2 + qr_size] = 0.0
+        return img, mask
+
+
+class RandomBorder(nn.Module):
+    """Randomly adds a border to the image."""
+
+    def __init__(self, p: float = 0.1, max_border_size: int = 90):
+        super().__init__()
+        self.p = p
+        self.max_border_size = max_border_size
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if random.random() > self.p:
+            return img, mask
+        border_size: int = int(torch.randint(1, self.max_border_size + 1, (1,)).item())
+        border_color = torch.rand(3).to(img.device).unsqueeze(1).unsqueeze(2)
+        mask_fill = torch.tensor([0.0, 1.0, 0]).to(img.device).unsqueeze(1).unsqueeze(2)
+
+        img[:, :border_size, :] = border_color
+        img[:, -border_size:, :] = border_color
+        img[:, :, :border_size] = border_color
+        img[:, :, -border_size:] = border_color
+
+        mask[:, :border_size, :] = mask_fill
+        mask[:, -border_size:, :] = mask_fill
+        mask[:, :, :border_size] = mask_fill
+        mask[:, :, -border_size:] = mask_fill
+
+        return img, mask
+
+
+class RandomFourierDropout(nn.Module):
+    def __init__(self, p: float = 0.1, max_dropout_rate: float = 0.5):
+        super().__init__()
+        self.p = p
+        self.max_dropout_rate = max_dropout_rate
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if torch.rand(1) > self.p:
+            return img, mask
+
+        dropout_rate = torch.rand(1) * self.max_dropout_rate
+
+        img_fft = torch.fft.fft2(img)
+        dropout_mask = torch.rand_like(img_fft.real) > dropout_rate
+        dropout_mask[:50, :50] = 1
+        dropout_mask[-50:, :50] = 1
+
+        transformed_img = torch.fft.ifft2(img_fft * dropout_mask).abs()
+        transformed_img = (transformed_img - transformed_img.min()) / (transformed_img.max() - transformed_img.min())
+
+        return transformed_img.clamp(0, 1), mask
+
+
 class RandomGradientOverlay(nn.Module):
     """Applies a gradient overlay to simulate uneven lighting."""
 
-    def __init__(self, p: float = 0.5, opacity_range: Tuple[float, float] = (-0.3, 0.1)):
+    def __init__(self, p: float = 0.1, opacity_range: Tuple[float, float] = (-0.3, 0.3)):
         super().__init__()
         self.p = p
         self.opacity_range = opacity_range
@@ -298,7 +502,11 @@ class RefineMask(nn.Module):
     """Ensures that the mask is valid after transformations."""
 
     def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        mask = mask / mask.sum(0, keepdim=True)
+        mask[0] /= mask[0].max().clamp(min=1e-6)
+        mask[2] /= mask[2].max().clamp(min=1e-6)
+        signal_mask = mask[2] > 0
+        mask[0] = torch.where(signal_mask, torch.zeros_like(mask[0]), mask[0])
+        mask[1] = torch.where(signal_mask, torch.zeros_like(mask[1]), mask[1])
         return img, mask
 
 
@@ -331,4 +539,53 @@ class GreyscaleTransform(nn.Module):
 
     def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         img = F.rgb_to_grayscale(img, num_output_channels=3)
+        return img, mask
+
+
+class RandomJPEGCompressionTransform(nn.Module):
+    """Applies random JPEG compression to the image."""
+
+    def __init__(self, quality: Union[int, Tuple[int, int]] = (2, 98), p: float = 0.5):
+        super().__init__()
+        self.jpeg_transform = T2.JPEG(quality=quality)
+        self.p = p
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if random.random() > self.p:
+            return img, mask
+        img = (img * 255).clamp(0, 255).byte()
+        img = self.jpeg_transform(img)
+        img = img.float() / 255
+        return img, mask
+
+
+class RandomZoomTransform(nn.Module):
+
+    def __init__(self, scale_range: Tuple[float, float] = (1.0, 4.0), p: float = 0.2):
+        super().__init__()
+        self.scale_range = scale_range
+        self.p = p
+
+    def forward(self, img: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if random.random() > self.p:
+            return img, mask
+        orig_height, orig_width = img.shape[1], img.shape[2]
+        scale = random.uniform(*self.scale_range)
+
+        # If scale == 1.0, return original
+        if scale == 1.0:
+            return img, mask
+
+        # Resize (zoom in)
+        new_height = int(orig_height * scale)
+        new_width = int(orig_width * scale)
+        img = F.resize(img, [new_height, new_width])
+        mask = F.resize(mask, [new_height, new_width])
+
+        # Center crop to original size
+        top = (new_height - orig_height) // 2
+        left = (new_width - orig_width) // 2
+        img = F.crop(img, top, left, orig_height, orig_width)
+        mask = F.crop(mask, top, left, orig_height, orig_width)
+
         return img, mask

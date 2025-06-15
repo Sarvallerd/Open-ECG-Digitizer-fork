@@ -6,33 +6,46 @@ MODEL:
         class_path: 'src.model.snake.Snake'
         KWARGS:
           interpolate_missing: true
+          autodetect_num_peaks: true
+          autodetect_num_peaks_min: 1
+          autodetect_num_peaks_max: 12
+          interpolate_missing: true
 
       PERSPECTIVE_DETECTOR:
         class_path: 'src.model.perspective_detector.PerspectiveDetector'
         KWARGS:
-          num_thetas: 300
+          num_thetas: 200
+
+      DEWARPER:
+        class_path: 'src.model.dewarper.Dewarper'
+        KWARGS:
+          abs_peak_threshold: 0.1
 
       SEGMENTATION_MODEL:
         class_path: 'src.model.unet.UNet'
-        weight_path: '/home/stenheli/ray_results/load_and_train_2025-01-02_07-50-08/load_and_train_2faeb_00000_0_depths=2_2_2_2_2_2,dims=8_32_64_64_128_128_2025-01-02_07-50-08/checkpoint_000023/checkpoint.pt'
+        weight_path: 'sandbox/weights_25.pt'
         KWARGS:
           num_in_channels: 3
-          num_out_channels: 3
-          dims: [8, 32, 64, 64, 128, 128]
+          num_out_channels: 4
+          dims: [32, 64, 128, 256, 320, 320, 320, 320]
           depth: 2
 
       CROPPER:
         class_path: 'src.model.cropper.Cropper'
         KWARGS:
-          granularity: 200
-          percentiles: [0.01, 0.99]
+          granularity: 80
+          percentiles: [0.02, 0.98]
 
       PIXEL_SIZE_FINDER:
         class_path: 'src.model.pixel_size_finder.PixelSizeFinder'
         KWARGS: {}
-    device: 'cpu'
+
+    device: 'cuda:0'
+    resample_size: 2500
+    rotate_on_resample: true
+    profile: true
 
 DATA:
-  images_path: '/data/validation_images/'
-  image_extensions: ['.png', '.jpg']
-  output_path: '/data/validation_output/'
+  images_path: '/dataset/pmcardio_ecg_image_dataset/visual_data/'
+  image_extensions: ['.png', '.jpg', 'jpeg']
+  output_path: 'sandbox/inference_output'

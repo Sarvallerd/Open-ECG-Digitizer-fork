@@ -1,7 +1,8 @@
-from typing import Any, List, Tuple, Union
-from torchvision.io import decode_image
 import os
+from typing import Any, List, Tuple, Union
+
 import torch
+from torchvision.io import decode_image
 
 
 class ECGScanDataset(torch.utils.data.Dataset[Any]):
@@ -37,13 +38,7 @@ class ECGScanDataset(torch.utils.data.Dataset[Any]):
 
     def _load_mask(self, file: str) -> torch.Tensor:
         mask: torch.Tensor = decode_image(os.path.join(self.data_path, file), mode="RGB").float() / 255.0
-        mask[0] = 1 - mask[1] - mask[2]  # Fill the red channel so that each pixel sums to 1
         return mask
-
-    def _mask_to_one_hot(self, mask: torch.Tensor) -> torch.Tensor:
-        num_classes = int(torch.max(mask)) + 1
-        one_hot_mask: torch.Tensor = torch.nn.functional.one_hot(mask.long(), num_classes).permute(2, 0, 1).float()
-        return one_hot_mask
 
     def __len__(self) -> int:
         return len(self.ecg_scan_files)
@@ -54,4 +49,5 @@ class ECGScanDataset(torch.utils.data.Dataset[Any]):
 
         if self.transform:
             scan, mask = self.transform(scan, mask)
+
         return scan, mask
