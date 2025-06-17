@@ -1,21 +1,23 @@
 name: Lint python
 on: [push]
+
 jobs:
   lint:
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v3
-      with:
-        python-version: '3.12'
-    - name: Install flake8
-      run: |
-        python3.12 -m pip install flake8
-        echo "PATH=$PATH:~/.local/bin" >> $GITHUB_ENV
-    - name: Lint python
-      run: flake8 .
-    - uses: psf/black@stable
-      with:
-        options: "--check --verbose"
-        src: "."
-        jupyter: false
-        version: "25.1.0"
+      - uses: actions/checkout@v4
+
+      - name: Set up Python virtual environment and install tools
+        run: |
+          python3.12 -m venv venv
+          ./venv/bin/python -m ensurepip --upgrade
+          ./venv/bin/python -m pip install --upgrade pip
+          ./venv/bin/pip install flake8==7.2.0 black==25.1.0
+
+      - name: Lint with flake8
+        run: |
+          ./venv/bin/flake8 .
+
+      - name: Check formatting with black
+        run: |
+          ./venv/bin/black --check --verbose .

@@ -23,6 +23,7 @@ module = [
     "scipy.*",
     "scikit-image.*",
     "transformers.*",
-    "sklearn.neighbors"
+    "sklearn.neighbors",
+    "torch_tps"
 ]
 ignore_missing_imports = true
