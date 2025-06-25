@@ -2,6 +2,31 @@
 
 <!-- version list -->
 
+## v1.4.0 (2025-06-25)
+
+### Bug Fixes
+
+- Convert apply_digital_redaction notebook to python script
+  ([`1e28edf`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/1e28edfc78137c4189e4054af7a6648b59139e41))
+
+- Visualize redaction percentage with plotly
+  ([`34f3f6e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/34f3f6e66dd8f507beee08f8cd2dcf41b625847e))
+
+### Features
+
+- Apply digital redaction to detected regions
+  ([`3e7eaad`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/3e7eaad5f03bbbc3cde10e0fa43cc4de4847bf6c))
+
+- Ensure images are properly redacted
+  ([`f848077`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f848077d907ac5ec0bc46093590724ec5dae9b90))
+
+- Final parameters for redaction
+  ([`48d487e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/48d487e6c3fc956910e9122aed652ebcd9c88ef4))
+
+- Implement adaptive redacted area finder
+  ([`87a3eec`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/87a3eec3a1c14ad26545ffcb4cd495acd8283f15))
+
+
 ## v1.3.0 (2025-06-25)
 
 ### Bug Fixes
