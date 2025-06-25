@@ -1,545 +1,472 @@
 # CHANGELOG
 
+<!-- version list -->
 
 ## v1.2.0 (2025-01-21)
 
 ### Bug Fixes
 
-* fix: fill average rgb image color for perspective ([`bb536be`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bb536befc643f72f9754e1f594da436e86709e07))
+- Fill average rgb image color for perspective
+  ([`bb536be`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bb536befc643f72f9754e1f594da436e86709e07))
 
 ### Continuous Integration
 
-* ci: use python3.10 ([`1c7e999`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/1c7e999b3d8651402147102dad7eb7b7ce09d104))
+- Add ~/.local/bin to path
+  ([`4805eb1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/4805eb155bfc7e45310059383ec308ae8dc4b752))
 
-* ci: add ~/.local/bin to path ([`4805eb1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/4805eb155bfc7e45310059383ec308ae8dc4b752))
+- Use python3.10
+  ([`1c7e999`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/1c7e999b3d8651402147102dad7eb7b7ce09d104))
 
-* ci: use self-hosted runners as github has limit ([`7097921`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/70979216ee6b1687f652b4fa3638d21bb4c75f97))
+- Use self-hosted runners as github has limit
+  ([`7097921`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/70979216ee6b1687f652b4fa3638d21bb4c75f97))
 
 ### Features
 
-* feat: add pixel_size_finder to InferenceWrapper ([`ec07675`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ec07675f54c206a91b217e78e7ea01f30fe6cad7))
+- Add pixel_size_finder to InferenceWrapper
+  ([`ec07675`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ec07675f54c206a91b217e78e7ea01f30fe6cad7))
 
-* feat: create a class to find mm/pixel in x and y direction ([`741bd5f`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/741bd5fe06ceec0e92532218209abec7be40aafa))
-
-### Unknown
-
-* Merge pull request #24 from Ahus-AIM/pixel_size_finder
-
-Pixel size finder ([`23d9c8e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/23d9c8e8848ff807fae7716979f422810a4bc454))
-
-* Merge pull request #25 from Ahus-AIM/self_hosted_runner
-
-Self hosted runner ([`c3bc783`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/c3bc783395d025732afa797043689afb3d2318fa))
+- Create a class to find mm/pixel in x and y direction
+  ([`741bd5f`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/741bd5fe06ceec0e92532218209abec7be40aafa))
 
 
 ## v1.1.0 (2025-01-21)
 
 ### Features
 
-* feat: separate cropping module ([`83edca6`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/83edca601ec0c749fd4da30d001127b7d4dec517))
+- Separate cropping module
+  ([`83edca6`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/83edca601ec0c749fd4da30d001127b7d4dec517))
 
 ### Refactoring
 
-* refactor: remove cropping logic from snake ([`bcdcfe6`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bcdcfe61df68ad7c65e2ad6e9937d31a51c92f99))
+- Remove cropping logic from snake
+  ([`bcdcfe6`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bcdcfe61df68ad7c65e2ad6e9937d31a51c92f99))
 
-* refactor: remove grid detector class ([`2667d2d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2667d2d01cdaa3630c706072f2edd5f46fdec684))
-
-### Unknown
-
-* Merge pull request #23 from Ahus-AIM/cropper
-
-Cropper ([`b1c1b01`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b1c1b016887035e6248a7bffaaec82c5ace182ed))
+- Remove grid detector class
+  ([`2667d2d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2667d2d01cdaa3630c706072f2edd5f46fdec684))
 
 
 ## v1.0.0 (2025-01-17)
 
-### Breaking
-
-* feat: support png masks instead of npy masks
-
-BREAKING CHANGE: bump the dataset to have png masks instead of npy masks ([`548f991`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/548f99163ecd937a96ba744cfa1d0453ee1a22ce))
-
 ### Bug Fixes
 
-* fix: raise error on empty dataloader ([`7fb0792`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7fb0792cef5430b516eafe32acae81270aac8f03))
+- Raise error on empty dataloader
+  ([`7fb0792`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7fb0792cef5430b516eafe32acae81270aac8f03))
+
+### Features
+
+- Support png masks instead of npy masks
+  ([`548f991`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/548f99163ecd937a96ba744cfa1d0453ee1a22ce))
 
 ### Refactoring
 
-* refactor: scans and masks are in same folder ([`e4be434`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e4be434e5062eb7b67752d5056a570de14d1eb51))
+- Scans and masks are in same folder
+  ([`e4be434`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e4be434e5062eb7b67752d5056a570de14d1eb51))
 
-### Unknown
+### Breaking Changes
 
-* Merge pull request #21 from Ahus-AIM/npy_to_png
-
-npy masks to png masks ([`f36591c`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f36591c78b188c964f68be4609156e2de5ff03fd))
+- Bump the dataset to have png masks instead of npy masks
 
 
 ## v0.15.0 (2025-01-16)
 
 ### Features
 
-* feat: create initial hyp search plan for unet ([`c18e3cb`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/c18e3cbce4406ce1a897ccca89821fefe773b4c6))
+- Create initial hyp search plan for unet
+  ([`c18e3cb`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/c18e3cbce4406ce1a897ccca89821fefe773b4c6))
 
-* feat: create WeightedDiceLossSquared ([`7692b81`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7692b813472fbd96a14e9231d9e106c3c363b6de))
-
-### Unknown
-
-* Merge pull request #20 from Ahus-AIM/initial_unet_segmentation
-
-Initial unet segmentation ([`ecf5894`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ecf5894c52afcb9840d8c47d69358fadeddf00d8))
+- Create WeightedDiceLossSquared
+  ([`7692b81`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7692b813472fbd96a14e9231d9e106c3c363b6de))
 
 
 ## v0.14.3 (2025-01-15)
 
 ### Bug Fixes
 
-* fix: use individual states for each run in EarlyStopper
-
-EarlyStopper used the same variables for each run, causing previous runs
-to affect the current run, and stop earlier than expected. ([`603ba36`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/603ba36724db78cc60adc2231b4fa5c013f0acaa))
-
-### Unknown
-
-* Merge pull request #18 from Ahus-AIM/fix_early_stopper_global_issue
-
-fix: use individual states for each run in EarlyStopper ([`b960167`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b960167375fed5a239e614770e6bd1eaa616add6))
+- Use individual states for each run in EarlyStopper
+  ([`603ba36`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/603ba36724db78cc60adc2231b4fa5c013f0acaa))
 
 
 ## v0.14.2 (2025-01-15)
 
 ### Bug Fixes
 
-* fix: resize if background image is lower resolution than ecg ([`eb5967b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/eb5967bc017540c85478abd7c34c82835b68664a))
-
-### Unknown
-
-* Merge pull request #19 from Ahus-AIM/vision_fix
-
-fix: resize if background image is lower resolution than ecg ([`6f57a62`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6f57a6259e7430a7d607cf04fb376f420099b3aa))
+- Resize if background image is lower resolution than ecg
+  ([`eb5967b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/eb5967bc017540c85478abd7c34c82835b68664a))
 
 
 ## v0.14.1 (2025-01-14)
 
 ### Bug Fixes
 
-* fix: start calculating metrics
+- Do not train on validation set
+  ([`6c634f0`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6c634f0e4deba4d8a80b6082a57cbf61e5c2a1be))
 
-The metrics were not calculated due to naming issues and incorrect
-control flow. ([`88728ea`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/88728ea59056132efcf989b1bcbfa4260c9f59da))
-
-* fix: do not train on validation set ([`6c634f0`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6c634f0e4deba4d8a80b6082a57cbf61e5c2a1be))
-
-### Unknown
-
-* Merge pull request #17 from Ahus-AIM/fix_report_of_metrics
-
-Fix report of metrics ([`0480c5d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/0480c5db1fcb6c1398115de16355a13fafd2105a))
+- Start calculating metrics
+  ([`88728ea`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/88728ea59056132efcf989b1bcbfa4260c9f59da))
 
 
 ## v0.14.0 (2025-01-13)
 
 ### Bug Fixes
 
-* fix: load weights to correct device and do not sort snake ([`e85d518`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e85d5181cc436de59a8886c385c0f938733f188c))
+- Load weights to correct device and do not sort snake
+  ([`e85d518`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e85d5181cc436de59a8886c385c0f938733f188c))
 
-* fix: remove erosion and edge effects ([`33610fc`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/33610fca3c3fa04eeab0fa01098f4c6a2081d463))
+- Remove erosion and edge effects
+  ([`33610fc`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/33610fca3c3fa04eeab0fa01098f4c6a2081d463))
 
-* fix: specify RGB to avoid bug ([`d811287`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d811287690ab231bd092e536c4801c3020ee6dc2))
+- Specify RGB to avoid bug
+  ([`d811287`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d811287690ab231bd092e536c4801c3020ee6dc2))
 
 ### Features
 
-* feat: optional automatic estimation of num peaks ([`9f9deff`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/9f9deff0b95abcbc86669cd82a063de8f74d0117))
-
-### Unknown
-
-* Merge pull request #16 from Ahus-AIM/fixes
-
-Fixes ([`f7569f2`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f7569f26809911d2cf2e971d2e6a70e2be61ac5d))
+- Optional automatic estimation of num peaks
+  ([`9f9deff`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/9f9deff0b95abcbc86669cd82a063de8f74d0117))
 
 
 ## v0.13.0 (2025-01-13)
 
 ### Bug Fixes
 
-* fix: improve naming of in- & out channels for unet ([`44c3588`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/44c358854fe648a8933bd9d662e7ba611964f908))
+- Configure hyperparameter search with searchspace kwargs
+  ([`8c27bd1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/8c27bd15285b09a06d4af82c51482fffa4bb1b33))
 
-* fix: improve control flow ([`1591018`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/15910184133ced1634d1844300a1dbc9dd2ea8d9))
+- Correct WeightedDiceLoss for batch size > 1
+  ([`2f94966`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2f94966935ac1b113e0fe21e9b3f3c173a70b517))
 
-* fix: flip metric comparison sign as we only use loss ([`09b563d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/09b563db57b24d9b7acc7c4b16cf5027ccf33c4d))
+- Enforce uniform depth for all unet en-/decoder blocks
+  ([`d2ab89e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d2ab89ea0edcba5eb6255f957852d447640aec65))
 
-* fix: enforce uniform depth for all unet en-/decoder blocks ([`d2ab89e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d2ab89ea0edcba5eb6255f957852d447640aec65))
+- Flip metric comparison sign as we only use loss
+  ([`09b563d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/09b563db57b24d9b7acc7c4b16cf5027ccf33c4d))
 
-* fix: correct WeightedDiceLoss for batch size > 1 ([`2f94966`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2f94966935ac1b113e0fe21e9b3f3c173a70b517))
+- Improve control flow
+  ([`1591018`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/15910184133ced1634d1844300a1dbc9dd2ea8d9))
 
-* fix: make hyperparameter search scheduler optional ([`10711a1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/10711a1386b592b9acd18355993981c10ee856b6))
+- Improve naming of in- & out channels for unet
+  ([`44c3588`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/44c358854fe648a8933bd9d662e7ba611964f908))
 
-* fix: seed hyperparameter search for uniform configuration each run ([`14b0a46`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/14b0a462710b280ad10a8119371f8f29e99debaa))
+- Make hyperparameter search scheduler optional
+  ([`10711a1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/10711a1386b592b9acd18355993981c10ee856b6))
 
-* fix: configure hyperparameter search with searchspace kwargs ([`8c27bd1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/8c27bd15285b09a06d4af82c51482fffa4bb1b33))
+- Seed hyperparameter search for uniform configuration each run
+  ([`14b0a46`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/14b0a462710b280ad10a8119371f8f29e99debaa))
 
 ### Features
 
-* feat: implement cosine to constant lr scheduler ([`12c950d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/12c950db16c83dc4ce6bab12a4d4f8d6f0c5875b))
+- Add learning rate scheduler
+  ([`e3bf78b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e3bf78bfe8484b5fba1605568824cd6f91fb645c))
 
-* feat: config file for unet hyperparameter search ([`c2236a6`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/c2236a682ea01ac6713919666b0c74471d05f10a))
+- Config file for unet hyperparameter search
+  ([`c2236a6`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/c2236a682ea01ac6713919666b0c74471d05f10a))
 
-* feat: support kwargs for metrics ([`5b1a4fe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5b1a4fe039d09c44ba10a8f960151d0cc9960b4e))
+- Enable custom union exponent
+  ([`b1742e3`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b1742e37abe36935331e4fe2149af2918a2c5da7))
 
-* feat: enable early stopping of training ([`2eea233`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2eea23322d442a20854e8493c4a6deab3d1b9868))
+- Enable early stopping of training
+  ([`2eea233`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2eea23322d442a20854e8493c4a6deab3d1b9868))
 
-* feat: add learning rate scheduler ([`e3bf78b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e3bf78bfe8484b5fba1605568824cd6f91fb645c))
+- Implement cosine to constant lr scheduler
+  ([`12c950d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/12c950db16c83dc4ce6bab12a4d4f8d6f0c5875b))
 
-* feat: implement MulticlassBinaryDiceLoss ([`d25e3d5`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d25e3d589655c3c72a665fdc38b9a38df346f48e))
+- Implement MulticlassBinaryDiceLoss
+  ([`d25e3d5`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d25e3d589655c3c72a665fdc38b9a38df346f48e))
 
-* feat: enable custom union exponent
-
-This is suggested in https://arxiv.org/abs/1606.04797. ([`b1742e3`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b1742e37abe36935331e4fe2149af2918a2c5da7))
+- Support kwargs for metrics
+  ([`5b1a4fe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5b1a4fe039d09c44ba10a8f960151d0cc9960b4e))
 
 ### Performance Improvements
 
-* perf: configure unet hyperparameter search ([`845ece9`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/845ece93ccdb404d8232d286a2b5d2fbac482aa2))
+- Calculate running metrics due to memory limitations
+  ([`75609c7`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/75609c7c44b75cf765f7d2e0eeefd6049f396447))
 
-* perf: increase performance by pinning dataloader memory ([`6da1eca`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6da1eca25222a68f011897d5d7b8e9060680ab2b))
+- Configure unet hyperparameter search
+  ([`845ece9`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/845ece93ccdb404d8232d286a2b5d2fbac482aa2))
 
-* perf: calculate running metrics due to memory limitations ([`75609c7`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/75609c7c44b75cf765f7d2e0eeefd6049f396447))
+- Increase performance by pinning dataloader memory
+  ([`6da1eca`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6da1eca25222a68f011897d5d7b8e9060680ab2b))
 
-* perf: load data samples lazily due to memory constraints ([`7bd647a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7bd647a8b8706b53913e2b5433ccc7a0ac8092c8))
+- Load data samples lazily due to memory constraints
+  ([`7bd647a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7bd647a8b8706b53913e2b5433ccc7a0ac8092c8))
 
 ### Refactoring
 
-* refactor: create class for binarization of multiclass loss ([`e1e1625`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e1e162553478ac56a19d2d35894777b4edc76d6b))
+- Create class for binarization of multiclass loss
+  ([`e1e1625`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e1e162553478ac56a19d2d35894777b4edc76d6b))
 
 ### Testing
 
-* test: remove compilation as it fails and is currently not necessary ([`f7fb902`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f7fb9027973329eb02b702af37dad40c841c433a))
-
-### Unknown
-
-* Merge pull request #15 from Ahus-AIM/train_segmentation
-
-Train segmentation ([`b7b2b54`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b7b2b547abbe8a5055dd00af2204a5609a7d97a5))
+- Remove compilation as it fails and is currently not necessary
+  ([`f7fb902`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f7fb9027973329eb02b702af37dad40c841c433a))
 
 
 ## v0.12.0 (2025-01-10)
 
 ### Bug Fixes
 
-* fix: do not crash on bad segmentation input ([`827f10b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/827f10bc580251508457d157b557caf11bf02204))
+- Do not crash on bad segmentation input
+  ([`827f10b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/827f10bc580251508457d157b557caf11bf02204))
 
 ### Features
 
-* feat: add maximum limit on nonzero pixels ([`7c2daa7`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7c2daa7e9c8cbea925a1d2b1cefc8f6558972214))
+- Add maximum limit on nonzero pixels
+  ([`7c2daa7`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7c2daa7e9c8cbea925a1d2b1cefc8f6558972214))
 
-* feat: digitization wrapper for inference ([`6be01c8`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6be01c8116ee83e941b8a60f6c2a9ba13a281480))
-
-### Unknown
-
-* Merge pull request #14 from Ahus-AIM/inference
-
-Inference ([`afb6d59`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/afb6d59ff24082d9be07004dc0b314d3f801651e))
+- Digitization wrapper for inference
+  ([`6be01c8`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6be01c8116ee83e941b8a60f6c2a9ba13a281480))
 
 
 ## v0.11.0 (2025-01-08)
 
 ### Features
 
-* feat: better snake init and interpolation of missing values ([`3979227`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/397922770e6fcac6712ab0c60eded8c405e1fc46))
-
-### Unknown
-
-* Merge pull request #13 from Ahus-AIM/snake_interp
-
-feat: better snake init and interpolation of missing values ([`db36e33`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/db36e33d217741666ea0cb1a5887cfb4beda1ebc))
+- Better snake init and interpolation of missing values
+  ([`3979227`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/397922770e6fcac6712ab0c60eded8c405e1fc46))
 
 
 ## v0.10.0 (2025-01-08)
 
 ### Features
 
-* feat: enable huggingface segmentation models
-
-The SegFormer model is configured. ([`afc4b9a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/afc4b9a9d5be8cbb032bef174f9a546dfb247541))
-
-### Unknown
-
-* Merge pull request #12 from Ahus-AIM/huggingface_segmentation
-
-feat: enable huggingface segmentation models ([`bae4a35`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bae4a3599fd95e67008498c86e393c3c40e7cc95))
+- Enable huggingface segmentation models
+  ([`afc4b9a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/afc4b9a9d5be8cbb032bef174f9a546dfb247541))
 
 
 ## v0.9.0 (2025-01-08)
 
 ### Features
 
-* feat: perspective and updated random resize ([`a0b48cc`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a0b48cc9e14996cbce2c66c3d2eeb0a97a3b83cf))
+- Cache transformed images to disc
+  ([`37f8716`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/37f8716c664714d5cf94c7d6683e74d23a9ddda3))
 
-* feat: cache transformed images to disc ([`37f8716`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/37f8716c664714d5cf94c7d6683e74d23a9ddda3))
-
-### Unknown
-
-* Merge pull request #11 from Ahus-AIM/improved_training_loop
-
-Cache transforms ([`da8f686`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/da8f68660d46eaba9cfda31cd007114e654deb63))
+- Perspective and updated random resize
+  ([`a0b48cc`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a0b48cc9e14996cbce2c66c3d2eeb0a97a3b83cf))
 
 
 ## v0.8.1 (2025-01-06)
 
 ### Bug Fixes
 
-* fix: reduce edge effects for robustness ([`96b69d1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/96b69d1bfb89f5c22adc2bf31e2bb1bfd2caabe6))
+- Reduce edge effects for robustness
+  ([`96b69d1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/96b69d1bfb89f5c22adc2bf31e2bb1bfd2caabe6))
 
-* fix: require grid pixels to be minima ([`1379dbe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/1379dbea386b53d5c48d0621058569b5ad3f9dda))
+- Require grid pixels to be minima
+  ([`1379dbe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/1379dbea386b53d5c48d0621058569b5ad3f9dda))
 
 ### Documentation
 
-* docs: example of perspective estimation on real image ([`b5b984d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b5b984d91c0e142c7f154bd6748e766783832b11))
+- Example of perspective estimation on real image
+  ([`b5b984d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b5b984d91c0e142c7f154bd6748e766783832b11))
 
-* docs: pgf figure image to angle/radius ([`f8bb721`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f8bb721079d00b64b7ce08d780bd04f304baecdb))
+- Illustrate perspective correction
+  ([`098c0c9`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/098c0c97083b1522fc016930babb8fb819055650))
 
-* docs: illustrate perspective correction ([`098c0c9`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/098c0c97083b1522fc016930babb8fb819055650))
-
-### Unknown
-
-* Merge pull request #10 from Ahus-AIM/perspective_figure
-
-Perspective figure ([`5ddc2eb`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5ddc2eb8a2bb25e800b1b17512592ec50112cace))
+- Pgf figure image to angle/radius
+  ([`f8bb721`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f8bb721079d00b64b7ce08d780bd04f304baecdb))
 
 
 ## v0.8.0 (2024-12-27)
 
 ### Features
 
-* feat: perspective detector handles binarization ([`2b743d2`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2b743d28a4d2a85a8befb3885ebb9d1bbea59951))
-
-### Unknown
-
-* Merge pull request #9 from Ahus-AIM/binarize_in_perspective
-
-Perspective RGB ([`9b69d6d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/9b69d6d30be3a590d15aec87078538946df6e337))
+- Perspective detector handles binarization
+  ([`2b743d2`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2b743d28a4d2a85a8befb3885ebb9d1bbea59951))
 
 
 ## v0.7.0 (2024-12-27)
 
 ### Bug Fixes
 
-* fix: probabilities sum to 1 ([`8b477fe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/8b477fe86cf9bf6fd9a73fead9377d566d645997))
+- Probabilities sum to 1
+  ([`8b477fe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/8b477fe86cf9bf6fd9a73fead9377d566d645997))
 
 ### Features
 
-* feat: add support for composed transforms ([`5b931bb`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5b931bbacbbb52a1f649eafa44e1edd9bed48f22))
+- Add support for composed transforms
+  ([`5b931bb`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5b931bbacbbb52a1f649eafa44e1edd9bed48f22))
 
-* feat: add transforms and optional reduced load size ([`01d2a59`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/01d2a59b2c777297e13e52b8cff377c222305765))
-
-### Unknown
-
-* Merge pull request #8 from Ahus-AIM/improved_training_loop
-
-Improved training loop ([`00a85ad`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/00a85ad3bb973aee90b4d73d7114209dd15f1b07))
+- Add transforms and optional reduced load size
+  ([`01d2a59`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/01d2a59b2c777297e13e52b8cff377c222305765))
 
 
 ## v0.6.0 (2024-12-23)
 
 ### Features
 
-* feat: perspective detection for ecg paper ([`e99d2ad`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e99d2ad63237908593472003d12fde5aa8395a00))
+- Perspective detection for ecg paper
+  ([`e99d2ad`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e99d2ad63237908593472003d12fde5aa8395a00))
 
 ### Testing
 
-* test: perspective detector returns reasonable src points ([`49e4c32`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/49e4c32722fd957cee6400c783693f02f067c1ba))
-
-### Unknown
-
-* Merge pull request #7 from Ahus-AIM/perspective
-
-Perspective detection ([`156abac`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/156abacdcb1093a004c1abf0c75bc49661a5632f))
+- Perspective detector returns reasonable src points
+  ([`49e4c32`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/49e4c32722fd957cee6400c783693f02f067c1ba))
 
 
 ## v0.5.0 (2024-12-20)
 
 ### Features
 
-* feat: ecg scan transforms and corresponding visualization ([`94192fd`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/94192fd83795aba32895472249c2634bb1d5ee28))
-
-### Unknown
-
-* Merge pull request #5 from Ahus-AIM/transforms
-
-Transformations and visualization ([`2024545`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2024545e9cc7e012cd68465b0cba807519d66ea0))
+- Ecg scan transforms and corresponding visualization
+  ([`94192fd`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/94192fd83795aba32895472249c2634bb1d5ee28))
 
 
 ## v0.4.0 (2024-12-19)
 
 ### Bug Fixes
 
-* fix: patch off by one epoch offset ([`a8e9713`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a8e971320c909de327ad2b9ef7b128b042563b77))
+- Cast metrics output to numpy as tune does not support tensors
+  ([`15c9819`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/15c98198ab12039c745e003858f1620c793b9a87))
 
-* fix: cast metrics output to numpy as tune does not support tensors ([`15c9819`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/15c98198ab12039c745e003858f1620c793b9a87))
+- Correct input order of predictions and targets to metrics
+  ([`bf62166`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bf6216620612e5e9101660e5d81e1c01e8a934a7))
 
-* fix: correct input order of predictions and targets to metrics ([`bf62166`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/bf6216620612e5e9101660e5d81e1c01e8a934a7))
+- Correct scaling of WeightedCrossEntropyLoss
+  ([`2b97ab1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2b97ab172b2b7b9fec410d53898511a67ce45c85))
 
-* fix: initialize metric classes ([`da3dc7e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/da3dc7e69f0a1b5f24764e8631f73c4b6f814566))
+- Initialize metric classes
+  ([`da3dc7e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/da3dc7e69f0a1b5f24764e8631f73c4b6f814566))
 
-* fix: store raw torch tensors to from predictions and targets ([`a44930e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a44930e933ee0493b7d5d8f0869c4a28fa969b4f))
+- Patch off by one epoch offset
+  ([`a8e9713`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a8e971320c909de327ad2b9ef7b128b042563b77))
 
-* fix: correct scaling of WeightedCrossEntropyLoss
-
-There are two fixes, 1 is subtracted from alpha st. to match the
-docstring description. Additionally, the loss is scaled st. the choice
-of alpha does not significantly increase/decrease the total loss. ([`2b97ab1`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2b97ab172b2b7b9fec410d53898511a67ce45c85))
+- Store raw torch tensors to from predictions and targets
+  ([`a44930e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a44930e933ee0493b7d5d8f0869c4a28fa969b4f))
 
 ### Continuous Integration
 
-* ci: increase max test time to 5 minutes ([`1611a5b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/1611a5be6f7e73fa6c2b75fda6934f85971727f7))
+- Increase max test time to 5 minutes
+  ([`1611a5b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/1611a5be6f7e73fa6c2b75fda6934f85971727f7))
 
 ### Documentation
 
-* docs: add marker for google docstring convention ([`f258d28`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f258d28d0a7577268122d3f5a264b571f3e002f6))
+- Add marker for google docstring convention
+  ([`f258d28`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f258d28d0a7577268122d3f5a264b571f3e002f6))
 
 ### Features
 
-* feat: train dummy segmentation network ([`5cb3264`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5cb32645990dc9b4cf0a367c3a7f64211b2847d6))
+- Implement MulticlassBinaryCrossEntropyLoss
+  ([`30b7aea`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/30b7aea13105685609822af41a5448b5cfc8a5d6))
 
-* feat: implement MulticlassBinaryCrossEntropyLoss ([`30b7aea`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/30b7aea13105685609822af41a5448b5cfc8a5d6))
+- Set up tensorboard
+  ([`ecea315`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ecea3158821dc1cb45118a94017a7b1ac1fcf4bf))
 
-* feat: set up tensorboard ([`ecea315`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ecea3158821dc1cb45118a94017a7b1ac1fcf4bf))
+- Split ecg dataset into train, val and test
+  ([`6715f97`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6715f977a16fe15afbd01df984eaf9973bfe6ed2))
 
-* feat: split ecg dataset into train, val and test ([`6715f97`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/6715f977a16fe15afbd01df984eaf9973bfe6ed2))
+- Train dummy segmentation network
+  ([`5cb3264`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5cb32645990dc9b4cf0a367c3a7f64211b2847d6))
 
 ### Performance Improvements
 
-* perf: add flag for cudnn_benchmark ([`dc50b21`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/dc50b21734a3c0e697bcb086281ba11931d7ba8f))
+- Add flag for cudnn_benchmark
+  ([`dc50b21`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/dc50b21734a3c0e697bcb086281ba11931d7ba8f))
 
-* perf: compile train function if not using ray and mixed precision
+- Compile train function if not using ray and mixed precision
+  ([`0d7eb8d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/0d7eb8dac14c95c03764011de9f8e8cde0bb3cf3))
 
-Ray (and the tests) needs the functions to be picklable. Compilation
-with mixed precision is not picklable. Training compilation and mixed
-precision works fine without tests and ray. ([`0d7eb8d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/0d7eb8dac14c95c03764011de9f8e8cde0bb3cf3))
-
-* perf: support mixed precision
-
-Some type changes were also needed in order to fully support this
-functionality. ([`7f10101`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7f10101a3239a5d7237ca92afd4754bca74da6dd))
-
-### Unknown
-
-* Merge pull request #6 from Ahus-AIM/train_unet_segmentation
-
-Train unet segmentation ([`5316262`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/531626248d4a85e5685a244744505a8faae64430))
+- Support mixed precision
+  ([`7f10101`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7f10101a3239a5d7237ca92afd4754bca74da6dd))
 
 
 ## v0.3.0 (2024-12-18)
 
 ### Bug Fixes
 
-* fix: rename to enable __call__ ([`7047811`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/70478110c09a85dfc90d7a9630454ee02d576e2c))
+- Remove superfluous argument
+  ([`398d925`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/398d9254ed25722cc4f34321256f30c31f552c78))
 
-* fix: remove torch.compile from inside model class ([`23ec2fe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/23ec2febe7d51d55a7c3c727e03e2a1d0c64ea68))
+- Remove torch.compile from inside model class
+  ([`23ec2fe`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/23ec2febe7d51d55a7c3c727e03e2a1d0c64ea68))
 
-* fix: remove superfluous argument ([`398d925`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/398d9254ed25722cc4f34321256f30c31f552c78))
+- Rename to enable __call__
+  ([`7047811`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/70478110c09a85dfc90d7a9630454ee02d576e2c))
 
 ### Documentation
 
-* docs: add docstrings to grid detectors ([`097b6f4`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/097b6f4f4c36fd344036d1a884f50a4f291340d4))
+- Add docstrings to grid detectors
+  ([`097b6f4`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/097b6f4f4c36fd344036d1a884f50a4f291340d4))
 
 ### Features
 
-* feat: multi-scale grid detection ([`7328f4e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7328f4edb59d0acfce8f82c40198643e5206ebd8))
+- Multi-scale grid detection
+  ([`7328f4e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7328f4edb59d0acfce8f82c40198643e5206ebd8))
 
 ### Testing
 
-* test: make sure multiscale grid detector runs ([`ed3e9d0`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ed3e9d0f1afaee14cb9251cf8e5ceeaff053bc14))
-
-### Unknown
-
-* Merge pull request #4 from Ahus-AIM/adaptive_grid
-
-Multi Scale Grid Detection ([`51b7194`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/51b71942af5dee56488285bce67ddacbe673f1fb))
+- Make sure multiscale grid detector runs
+  ([`ed3e9d0`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ed3e9d0f1afaee14cb9251cf8e5ceeaff053bc14))
 
 
 ## v0.2.0 (2024-12-16)
 
 ### Bug Fixes
 
-* fix: one hot encode target mask ([`f7592b9`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f7592b96918105929d8d64b873889e759b7d60e7))
+- One hot encode target mask
+  ([`f7592b9`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f7592b96918105929d8d64b873889e759b7d60e7))
 
-* fix: path for dice loss ([`3b7c3ba`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/3b7c3ba959ef4cee1d87f540263083c5676e7f60))
+- Path for dice loss
+  ([`3b7c3ba`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/3b7c3ba959ef4cee1d87f540263083c5676e7f60))
 
-* fix: use custom loss ([`ccb697b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ccb697b8069d53007de44c44cbfdb211ba82fce5))
+- Use custom loss
+  ([`ccb697b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ccb697b8069d53007de44c44cbfdb211ba82fce5))
 
 ### Continuous Integration
 
-* ci: ignore long comments ([`32d0c02`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/32d0c023e25ab801f9f6d0e1e43fd7ba37ca4b3e))
+- Ignore long comments
+  ([`32d0c02`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/32d0c023e25ab801f9f6d0e1e43fd7ba37ca4b3e))
 
 ### Features
 
-* feat: snake fitter, no cuda support yet ([`a0d659b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a0d659bb7ba0853d3f06d292392ecd5d6dab4848))
+- Grid detection with cuda support
+  ([`456f152`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/456f152b6a848ccbbaefdfc7e18e3f170c55e704))
 
-* feat: grid detection with cuda support ([`456f152`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/456f152b6a848ccbbaefdfc7e18e3f170c55e704))
+- Snake and segmentation losses
+  ([`7be3a0a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7be3a0a2ca9a6d55f2fcc7c827601fe8d3d0c182))
 
-* feat: snake and segmentation losses ([`7be3a0a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/7be3a0a2ca9a6d55f2fcc7c827601fe8d3d0c182))
+- Snake fitter, no cuda support yet
+  ([`a0d659b`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a0d659bb7ba0853d3f06d292392ecd5d6dab4848))
 
 ### Testing
 
-* test: change model params for faster testing ([`888ab20`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/888ab20cd1056830456d98e0014e98dbd70cb070))
-
-### Unknown
-
-* Merge pull request #3 from Ahus-AIM/snakes_etc
-
-Snakes, Grid detection, Losses ([`0c099df`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/0c099df5e4a3a2fcffe29629856423c405c3475c))
+- Change model params for faster testing
+  ([`888ab20`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/888ab20cd1056830456d98e0014e98dbd70cb070))
 
 
 ## v0.1.0 (2024-12-13)
 
 ### Continuous Integration
 
-* ci: add .gitignore ([`b9a29b2`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b9a29b2386f63cee7507de64fa890e782186087f))
+- Add .gitignore
+  ([`b9a29b2`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/b9a29b2386f63cee7507de64fa890e782186087f))
 
-* ci: typecheck python with mypy ([`70c6fdf`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/70c6fdf2b73fb5c1dd8edc1d46a261d070bfec3f))
+- Ignore E203 for flake8 as black handles formatting
+  ([`40659ee`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/40659eec5abcda2fb19761d750d3fb367200d54d))
 
-* ci: ignore E203 for flake8 as black handles formatting ([`40659ee`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/40659eec5abcda2fb19761d750d3fb367200d54d))
+- Increase flake8 line length to 120
+  ([`d0c522a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d0c522a4c00296fe6af49ed5d1adc17e9733c009))
 
-* ci: use black in addition to flake8 for formatting ([`e3208b5`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e3208b51fe37ee2269a370c4ea12f15d3060514c))
+- Typecheck python with mypy
+  ([`70c6fdf`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/70c6fdf2b73fb5c1dd8edc1d46a261d070bfec3f))
 
-* ci: increase flake8 line length to 120 ([`d0c522a`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/d0c522a4c00296fe6af49ed5d1adc17e9733c009))
+- Use black in addition to flake8 for formatting
+  ([`e3208b5`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e3208b51fe37ee2269a370c4ea12f15d3060514c))
 
 ### Documentation
 
-* docs: add test status badge ([`ddd700e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ddd700ea9cc0e3b65d949398070df6ce6a8b35cd))
+- Add test status badge
+  ([`ddd700e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/ddd700ea9cc0e3b65d949398070df6ce6a8b35cd))
 
 ### Features
 
-* feat: set up project structure ([`a84603f`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a84603f2f6745e01c4eb9171f782a2c7aa31786b))
+- Set up project structure
+  ([`a84603f`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/a84603f2f6745e01c4eb9171f782a2c7aa31786b))
 
 ### Testing
 
-* test: set up pytest ([`2641fe3`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2641fe32ceb1c6802d0782ba6d1f80828d32e7e7))
-
-### Unknown
-
-* Merge pull request #2 from Ahus-AIM/project_structure
-
-Project structure ([`48d950d`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/48d950d08febc8455965eff7cf071c8f56ecddd8))
+- Set up pytest
+  ([`2641fe3`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2641fe32ceb1c6802d0782ba6d1f80828d32e7e7))
 
 
 ## v0.0.0 (2024-12-06)
 
-### Chores
-
-* chore: set up semantic versioning ([`4dda991`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/4dda9913d3c50108714993c2aecbc40cf407699c))
-
-### Continuous Integration
-
-* ci: lint python ([`f26d088`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/f26d0881fb049641f016d9f42acfd2572faf1f7b))
-
-* ci: lint commits ([`e51f517`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e51f517fd72669ffb5eeb48736de9f3df73f574c))
-
-### Documentation
-
-* docs: initial commit ([`e16f1cb`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/e16f1cbd0fdfd7fa08a0687acd7f8091dc75cc69))
-
-### Unknown
-
-* Merge pull request #1 from Ahus-AIM/set_up_repository
-
-Set up automatic linting and semantic versioning ([`5ccab2e`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/5ccab2e3577c5e5d28a8b84ccd3be11793ecd3fb))
+- Initial Release
