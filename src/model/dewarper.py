@@ -8,7 +8,7 @@ import numpy.typing as npt
 import torch
 from skimage.feature import peak_local_max
 from sklearn.neighbors import NearestNeighbors
-from torch_tps import ThinPlateSpline  # Assuming this is installed
+from torch_tps import ThinPlateSpline
 
 DEBUG = False
 # If DEBUG is True, specify a directory to save plots
@@ -311,7 +311,7 @@ class Dewarper(torch.nn.Module):
         loss = ((max_diff - target_distance).pow(2) + min_diff.pow(2)).mean().sqrt()
         return loss
 
-    def _plot_positions(self, pos: torch.Tensor, title: str, filename: str, c: np.ndarray | None = None) -> None:
+    def _plot_positions(self, pos: torch.Tensor, title: str, filename: str, c: npt.NDArray[Any] | None = None) -> None:
         """
         Plots node positions.
 
@@ -440,7 +440,13 @@ class Dewarper(torch.nn.Module):
         indices = torch.randperm(input_ctrl.shape[0])[: self.max_num_warp_points]
         sampled_input_ctrl = input_ctrl[indices]
         sampled_output_ctrl = output_ctrl[indices]
-        tps.fit(sampled_output_ctrl, sampled_input_ctrl)
+        try:
+            tps.fit(sampled_output_ctrl, sampled_input_ctrl)
+        except Exception as e:
+            print(f"Error fitting TPS: {e}. The dewarping failed.")
+            tps.fit(
+                torch.tensor([[1.0, 2.0], [1.0, 3.0]]), torch.tensor([[1.0, 2.0], [1.0, 3.0]])
+            )  # Fallback to identity transform
 
         i = torch.arange(height, dtype=torch.float32)
         j = torch.arange(width, dtype=torch.float32)
