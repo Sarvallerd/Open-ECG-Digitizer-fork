@@ -1,3 +1,4 @@
+import argparse
 import multiprocessing
 import os
 import tempfile
@@ -15,7 +16,12 @@ from tqdm import tqdm
 from yacs.config import CfgNode as CN
 
 from src.config.default import get_cfg, merge_cfg
-from src.utils import get_data_loaders, import_class_from_path, load_model
+from src.utils import (
+    find_config_path,
+    get_data_loaders,
+    import_class_from_path,
+    load_model,
+)
 
 
 def run_epoch(
@@ -237,7 +243,11 @@ def load_and_train(ray_config: CN, config: CN) -> None:
         if hasattr(config.TRAIN, "LR_SCHEDULER")
         else None
     )
-    criterion = import_class_from_path(config.TRAIN.CRITERION.class_path)()
+    criterion_kwargs = config.TRAIN.CRITERION.KWARGS if hasattr(config.TRAIN, "CRITERION") else {}
+    for key, value in criterion_kwargs.items():
+        if isinstance(value, list):
+            criterion_kwargs[key] = torch.tensor(value, dtype=torch.float32).to(config.TRAIN.KWARGS.device)
+    criterion = import_class_from_path(config.TRAIN.CRITERION.class_path)(**criterion_kwargs)
     train_dataloader, val_dataloader, test_dataloder = get_data_loaders(config.DATASET, config.DATALOADER.KWARGS)
 
     train_fn = train
@@ -306,5 +316,16 @@ def main(config: CN) -> Optional[ExperimentAnalysis]:
 
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn", force=True)  # CUDA does not support "fork", which is default on linux.
-    cfg = get_cfg("src/config/unet.yml")
+    parser = argparse.ArgumentParser(description="Train a model with the specified configuration.")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="unet.yml",
+        help="Config file name or path (searched in . and src/config/). Default: unet.yml",
+    )
+    args = parser.parse_args()
+
+    config_path = find_config_path(args.config)
+    cfg = get_cfg(config_path)
+
     main(cfg)
