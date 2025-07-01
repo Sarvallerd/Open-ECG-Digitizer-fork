@@ -40,6 +40,24 @@ class EarlyStopper(Stopper):
         return False
 
 
+def find_config_path(filename: str) -> str:
+    """Tries to find the config file in . or src/config.
+
+    Args:
+        filename: Config file name or path.
+
+    Returns:
+        Absolute path to config.
+    """
+    if os.path.isfile(filename):
+        return filename
+    # Try in src/config/
+    try_path = os.path.join("src", "config", filename)
+    if os.path.isfile(try_path):
+        return try_path
+    raise FileNotFoundError(f"Could not find config file: {filename}")
+
+
 def get_data_loaders(
     dataset_config: Dict[Any, Any], dataloader_config: Dict[Any, Any]
 ) -> Tuple[DataLoader[Any], DataLoader[Any], DataLoader[Any]]:

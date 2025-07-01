@@ -3,6 +3,7 @@ import random
 from collections.abc import Iterable
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torchvision.io import decode_image
 from tqdm import tqdm
@@ -65,6 +66,8 @@ def main(config: CN) -> None:
     for file_path in loading_bar:
         if "photos" not in file_path:
             continue
+        # if "highlighted" in file_path:
+        #     continue
         image = decode_image(file_path, mode="RGB")
         image = adjust_image_shape(image)
         got_values = inference_wrapper(image)
@@ -77,34 +80,27 @@ def main(config: CN) -> None:
             # Plot and save output
             fig, axs = plt.subplots(2, 2, figsize=(20, 14))
             axs[0, 0].imshow(got_values["image"].squeeze().permute(1, 2, 0).cpu().numpy())
+            # axs[0, 0].imshow(got_values["text_probabilities_aligned"].squeeze().cpu().numpy())
             source_points = got_values["source_points"]
             axs[0, 0].scatter(source_points[:, 0].cpu().numpy(), source_points[:, 1].cpu().numpy(), s=20, c="red")
             axs[0, 1].imshow(got_values["image_aligned"].squeeze().permute(1, 2, 0).cpu().numpy())
             axs[1, 0].imshow(
                 got_values["signal_probabilities_aligned"].squeeze().cpu().numpy(), interpolation="none", vmin=0, vmax=1
             )
-            axs[1, 1].plot(got_values["snake"].cpu().numpy().T)
+            # axs[1, 1].plot(got_values["signal"].cpu().numpy().T)
+            if got_values.get("canonical_lines", None) is not None:
+                lines = got_values["canonical_lines"].cpu().numpy()
+                lines += np.linspace(0, 24, num=lines.shape[0])[:, None]
+                axs[1, 1].plot(lines.T, alpha=0.5)
             axs[1, 1].invert_yaxis()
-            axs[1, 1].set_xlim(0, got_values["signal_probabilities_aligned"].shape[1])
-            axs[1, 1].set_ylim(got_values["signal_probabilities_aligned"].shape[0], 0)
             plt.tight_layout()
 
-            # save the signal probabilities aligned as npy array in the output directory
-            output_signal_probabilities_path = os.path.splitext(output_file_path)[0] + "_signal_probabilities.npy"
-            os.makedirs(os.path.dirname(output_signal_probabilities_path), exist_ok=True)
+            if got_values.get("canonical_lines", None) is not None:
+                ofp = os.path.splitext(output_file_path)[0] + "_timeseries_canonical.npy"
+                os.makedirs(os.path.dirname(ofp), exist_ok=True)
+                timeseries_canonical = got_values["canonical_lines"].squeeze().cpu().numpy()
+                np.save(ofp, timeseries_canonical)
 
-            import numpy as np
-
-            signal_probs_to_save = got_values["signal_probabilities_aligned"].squeeze().cpu().numpy()
-            np.save(output_signal_probabilities_path, signal_probs_to_save)
-            grid_probs_aligned = got_values["grid_probabilities_aligned"].squeeze().cpu().numpy()
-            pixpermm = 2 / (got_values["mm_per_pixel_x"] + got_values["mm_per_pixel_y"])
-            np.save(
-                os.path.splitext(output_file_path)[0] + f"XXX{pixpermm:.3f}XXX_grid_probabilities.npy",
-                grid_probs_aligned,
-            )
-
-            # a box is 5 mm, plot some boxes on the image
             for i in range(0, 15, 2):
                 for j in range(0, 15, 2):
                     axs[0, 1].add_patch(
@@ -117,9 +113,13 @@ def main(config: CN) -> None:
                         )
                     )
 
+            # set got values layout as title
+            title = got_values["layout"]
+            plt.suptitle(title, fontsize=16)
+
             # Change file extension to .png for saving
             output_file_path = os.path.splitext(output_file_path)[0] + ".png"
-            plt.savefig(output_file_path, bbox_inches="tight", dpi=150)
+            plt.savefig(output_file_path, dpi=150)
             plt.close()
 
 
