@@ -1,0 +1,4 @@
+digitized_dir: sandbox/inference_output
+ground_truth_dir: '/dataset/ecg-digitization/images_and_scans_with_csvs/'
+results_csv: sandbox/metrics.csv
+shift_steps: 100
