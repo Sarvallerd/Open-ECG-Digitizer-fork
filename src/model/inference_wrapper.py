@@ -78,11 +78,14 @@ class InferenceWrapper(Module):
         self.times: dict[str, float] = {}
 
     @torch.no_grad()
-    def forward(self, image: Tensor) -> dict[str, Tensor | str | float | None | dict[str, Any]]:
+    def forward(
+        self, image: Tensor, layout_should_include_substring: None | str
+    ) -> dict[str, Tensor | str | float | None | dict[str, Any]]:
         """Performs full inference on an input image.
 
         Args:
             image: Input image tensor.
+            layout_should_include_substring: Optional substring to filter layout names.
 
         Returns:
             Dictionary with processed outputs and intermediate results.
@@ -120,7 +123,12 @@ class InferenceWrapper(Module):
 
         self._print_profiling_results()
 
-        layout = self.identifier(signals, aligned_text_prob, avg_pixel_per_mm)
+        layout = self.identifier(
+            signals,
+            aligned_text_prob,
+            avg_pixel_per_mm,
+            layout_should_include_substring=layout_should_include_substring,
+        )
         try:
             layout_str = layout["layout"] + " flipped: " + str(layout["flip"])
         except KeyError:
