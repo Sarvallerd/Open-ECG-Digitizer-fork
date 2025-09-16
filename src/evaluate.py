@@ -11,9 +11,7 @@ from tqdm import tqdm
 from yacs.config import CfgNode as CN
 
 from src.config.default import get_cfg
-from src.utils import (
-    find_config_path,
-)
+from src.utils import find_config_path
 
 
 def crop_ahus_raw_timeseries(gt: npt.NDArray[Any]) -> npt.NDArray[Any]:
