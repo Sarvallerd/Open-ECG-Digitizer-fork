@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.9.0 (2025-10-03)
+
+### Documentation
+
+- Update readme to describe overriding config in inference
+  ([`2b02686`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/2b026865283e59b4e36a35788494a1b31650e303))
+
+### Features
+
+- Enable overriding of config, remove default config
+  ([`428f8b4`](https://github.com/Ahus-AIM/Electrocardiogram-Digitization/commit/428f8b4363b2bbe3d72650a6e66733c7daa5c069))
+
+
 ## v1.8.0 (2025-10-02)
 
 ### Documentation
