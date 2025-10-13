@@ -4,7 +4,11 @@
 
 This repository provides a highly configurable tool for digitizing 12-lead ECGs, extracting raw time series data from scanned images or photographs (e.g., taken with a phone). It supports any subset of the 12 standard leads and is robust to perspective distortions and image quality variations.
 
----
+<div style="display: flex; justify-content: center; gap: 30px;">
+  <img src="assets/visual_abstract-img0.png" alt="Mobile phone photo" width="31%">
+  <img src="assets/visual_abstract-img1.png" alt="Segmented mobile phone photo" width="31%">
+  <img src="assets/visual_abstract-img2.png" alt="Segmented and perspective corrected mobile phone photo" width="36.55%">
+</div>
 
 ## Features
 
@@ -13,13 +17,35 @@ This repository provides a highly configurable tool for digitizing 12-lead ECGs,
 - Works with any subset of leads
 - Easily configurable via yaml config files
 
----
+## File structure and module overview
+
+Each component of the ECG digitization pipeline is modularized under [`src/model`](src/model).  
+
+<p align="center">
+  <img src="assets/pipeline-overview.svg" alt="Pipeline Overview" width="100%">
+</p>
+
+Below is an overview of their purpose and debugging relevance, in approximate execution order:
+
+| Module | Description |
+|:--------|:-------------|
+| [`src/model/unet.py`](src/model/unet.py) | **Semantic segmentation network** - a U-Net model trained to identify ECG traces, grids, and background. Retrain or fine-tune it using [`src/train.py`](src/train.py) if it underperforms. You can modify the on-the-fly transforms to mimic your own data [`src/transform/vision.py`](src/transform/vision.py). |
+| ([`src/model/dewarper.py`](src/model/dewarper.py)) | **Experimental full dewarping** - for folded or curved ECG paper. Not formally evaluated. Not recommended for flat papers, as perspective correction is more robust. Not enabled in the provided configuration YAML files. |
+| [`src/model/perspective_detector.py`](src/model/perspective_detector.py) | **Perspective correction** - estimates and corrects projective distortions. Handles up to ~45° rotation. |
+| [`src/model/cropper.py`](src/model/cropper.py) | **Cropping and bounding box extraction** - used to crop the image based on the location of the ECG leads. |
+| [`src/model/pixel_size_finder.py`](src/model/pixel_size_finder.py) | **Grid size estimation** - autocorrelation-based template matching. Configure grid parameters (minor/major ratio, expected line counts) in your inference YAML in case this underperforms. |
+| [`src/model/lead_identifier.py`](src/model/lead_identifier.py) | **Layout identification** - matches cropped regions to known ECG lead layouts using predefined templates. Update or prune templates in `src/config/lead_layouts_*.yml`. |
+| [`src/model/signal_extractor.py`](src/model/signal_extractor.py) | **Segmentation-to-trace conversion** - converts segmented images into digitized voltage–time signals. Might set parts of signals to NaN in case of overlapping signals. |
+| [`src/model/inference_wrapper.py`](src/model/inference_wrapper.py) | **Main orchestration script** - connects all components. |
+
+**Questions or in need of help?** Contact elias.stenhede at ahus.no
 
 ## Installation
 
 **Requirements:** Python 3.12 or later.
 
-**Note:** This setup has been tested on Ubuntu 24.04.2 and Debian 12 with CUDA. You need to install git-lfs to download the weights.
+> [!NOTE]
+> This setup has been tested on Ubuntu 24.04.2 and Debian 12 with CUDA. You need to install git-lfs to download the weights.
 
 1. Ensure you have installed python3.12, git and git-lfs.
 2. Clone the repository: ```git clone git@github.com:Ahus-AIM/Electrocardiogram-Digitization.git```
@@ -38,3 +64,4 @@ This repository provides a highly configurable tool for digitizing 12-lead ECGs,
 ## Train on custom dataset
 1. Change `data_path` for TRAIN, VAL and TEST in [src/config/unet.yml](src/config/unet.yml) to the locations of the custom dataset.
 2. Run: ```python3 -m src.train```
+
