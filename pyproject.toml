@@ -1,32 +1,29 @@
-[tool.semantic_release]
-version_variables = ["setup.py:__version__"]
-commit_message = "chore: update version to {version}"
-
-[tool.semantic_release.branches.main]
-match = "(main|master)"
-prerelease = false
-
-[tool.semantic_release.branches.set_up_repository]
-match = "^(?!main$).+"
-prerelease = false
-
-[tool.black]
-line-length = 120
-
-[tool.isort]
-profile="black"
-
-[tool.mypy]
-strict = true
-
-[[tool.mypy.overrides]]
-module = [
-    "yacs.*",
-    "torchvision.*",
-    "scipy.*",
-    "scikit-image.*",
-    "transformers.*",
-    "sklearn.neighbors",
-    "torch_tps"
+[project]
+name = "oed"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.1.0",
+    "ipywidgets>=8.1.8",
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.4",
+    "opencv-python>=4.11.0.86",
+    "optuna>=4.6.0",
+    "pandas>=2.3.3",
+    "plotly>=6.4.0",
+    "scikit-image>=0.25.2",
+    "scikit-learn>=1.7.2",
+    "tensorboard>=2.20.0",
+    "torch>=2.9.0",
+    "torchvision>=0.24.0",
+    "tqdm>=4.67.1",
+    "transformers>=4.57.1",
+    "yacs>=0.1.8",
 ]
-ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.4",
+]
