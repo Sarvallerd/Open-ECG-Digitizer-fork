@@ -132,7 +132,7 @@ def obj(
 
         for k, v in leads_metrics.items():
             full_metrics[k].append(v)
-    return np.mean([np.mean(v) for v in full_metrics.values()])
+    return tuple([np.mean(v) for v in full_metrics.values()])
 
 
 def run_study(
@@ -144,7 +144,7 @@ def run_study(
     paths_pct: float = 0.1,
     max_digitize_duration: int = 60,
 ) -> dict[str, int | float]:
-    study = optuna.create_study(direction="maximize",)
+    study = optuna.create_study(directions=["maximize" for _ in leads_names])
     study.optimize(
         lambda trial: obj(
             trial=trial,
