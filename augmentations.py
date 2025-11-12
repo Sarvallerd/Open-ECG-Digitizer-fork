@@ -131,29 +131,61 @@ def goida_augment(image_path, mask_path, scale, backgrounds_path=BASE/'backgroun
     return start_index + num_augmentations
 
 def multi_goida_augment(args):
-    image_path, mask_path, folder, start_index = args
+    image_path, mask_path, folder, start_index, num_augmentations = args
     try:
         goida_augment(
         image_path=image_path,
         mask_path=mask_path,
         scale=0.75,
         output_dir=folder,
-        num_augmentations=10,
+        num_augmentations=num_augmentations,
         start_index=start_index
         )
     except:
         return
 
-def create_augmented_dataset(num_images: int, train_test_split: int = 0.7, n_processes: int = 40):
+def create_augmented_dataset(no_aug_data_path: Path,
+                             aug_data_path: Path,
+                             train_test_ratio: float = 0.7,
+                             n_processes: int = 40,
+                             num_augmentations : int = 10
+) -> None:
     work = []
-    for i in tqdm(range(1, num_images + 1)):
-        if i < int(train_test_split * num_images): 
-            folder = aug_path/'train'
-        else:
-            folder = aug_path/'val'
-        filename = f'{i:05d}'
-        image_path = no_aug_path/f'{filename}_lr-0.png'
-        mask_path = no_aug_path/f'{filename}_lr-0_mask.png'
-        start_index = (i - 1) * 10
-        work.append((image_path, mask_path, folder, start_index))    
-    multiprocessing.Pool(processes=n_processes).map(multi_goida_augment, work)
+    aug_data_path.mkdir(parents=True, exist_ok=True)
+    (aug_data_path/'train').mkdir(parents=True, exist_ok=True)
+    (aug_data_path/'val').mkdir(parents=True, exist_ok=True)
+    
+    n_total = len(list(no_aug_data_path.glob('*.hea')))
+    processed_files = 0
+    
+    for filename in no_aug_data_path.glob('*.hea'):
+        base_name = filename.stem
+        image_file = no_aug_data_path/f'{base_name}-0.png'
+        mask_file = no_aug_data_path/f'{base_name}-0_mask.png'
+        
+        if image_file.is_file() and mask_file.is_file():
+            folder = aug_data_path/('train' if processed_files < int(train_test_ratio * n_total) else 'val')
+            start_index = processed_files
+            
+            work.append(
+                (
+                    image_file,
+                    mask_file,
+                    folder,
+                    start_index,
+                    num_augmentations
+                )
+            )
+            processed_files += 1
+    
+    print(f"Всего файлов для обработки: {len(work)}")
+    multiprocessing.Pool(n_processes).map(multi_goida_augment, work)
+
+if __name__ == '__main__':
+    create_augmented_dataset(
+        Path('/home/jovyan/shares/SR003.nfs2/kandi_image/T2I_Whatislove/sub/no_aug_data'),
+        Path('/home/jovyan/shares/SR003.nfs2/kandi_image/T2I_Whatislove/sub/aug_data'),
+        train_test_ratio=0.7,
+        n_processes=15,
+        num_augmentations=5
+    )
