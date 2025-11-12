@@ -158,4 +158,4 @@ def run_study(
         n_jobs=n_jobs,
         show_progress_bar=True,
     )
-    return study.best_params
+    return study.best_trials
