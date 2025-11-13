@@ -53,15 +53,15 @@ shadowcast = ShadowCast(shadow_side = "bottom",
 
 
 def goida_augment(image_path, mask_path, scale, backgrounds_path=BASE/'backgrounds',
-                    output_dir=BASE/'augdata', num_augmentations=2, start_index=0):
+                    output_dir=BASE/'augdata', num_augmentations=2):
     os.makedirs(output_dir, exist_ok=True)
     original_name = image_path.name.split('_')[0]
     if list(output_dir.glob(f'{original_name}*')):
         return
     image = cv2.imread(image_path)
     mask = cv2.imread(mask_path)
-    cv2.imwrite(output_dir/f'{original_name}_{start_index:05d}.png', image)
-    cv2.imwrite(output_dir/f'{original_name}_{start_index:05d}_mask.png', mask)
+    cv2.imwrite(output_dir/f'{original_name}_aug0.png', image)
+    cv2.imwrite(output_dir/f'{original_name}_aug0_mask.png', mask)
     image = lcdscreenpattern(image)
     image = lighting_gradient_gaussian(image)
     image = shadowcast(image)
@@ -121,17 +121,16 @@ def goida_augment(image_path, mask_path, scale, backgrounds_path=BASE/'backgroun
         
         A.RandomGamma(gamma_limit=(80, 120), p=1),
     ])
-    for i in range(start_index + 1, start_index + num_augmentations + 1):
+    for i in range(1, num_augmentations + 1):
         augmented = transform(
             image=image,
             mask=mask,
         )
-        cv2.imwrite(output_dir/f'{original_name}_{i:05d}.png', augmented['image'])
-        cv2.imwrite(output_dir/f'{original_name}_{i:05d}_mask.png', augmented['mask'])
-    return start_index + num_augmentations
+        cv2.imwrite(output_dir/f'{original_name}_aug{i}.png', augmented['image'])
+        cv2.imwrite(output_dir/f'{original_name}_aug{i}_mask.png', augmented['mask'])
 
 def multi_goida_augment(args):
-    image_path, mask_path, folder, start_index, num_augmentations = args
+    image_path, mask_path, folder, num_augmentations = args
     try:
         goida_augment(
         image_path=image_path,
@@ -139,7 +138,6 @@ def multi_goida_augment(args):
         scale=0.75,
         output_dir=folder,
         num_augmentations=num_augmentations,
-        start_index=start_index
         )
     except:
         return
@@ -172,14 +170,18 @@ def create_augmented_dataset(no_aug_data_path: Path,
                     image_file,
                     mask_file,
                     folder,
-                    start_index,
                     num_augmentations
                 )
             )
             processed_files += 1
     
-    print(f"Всего файлов для обработки: {len(work)}")
-    multiprocessing.Pool(n_processes).map(multi_goida_augment, work)
+    print(f"# семплов = {len(work)}")
+    
+    with multiprocessing.Pool(n_processes) as pool:
+        list(tqdm(
+            pool.imap_unordered(multi_goida_augment, work),
+            total=len(work)
+        ))
 
 if __name__ == '__main__':
     create_augmented_dataset(
