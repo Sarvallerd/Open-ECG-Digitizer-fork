@@ -10,7 +10,9 @@ from augraphy import (
     LCDScreenPattern,
     LightingGradient,
     ShadowCast,
-    BadPhotoCopy
+    BadPhotoCopy,
+    AugmentationSequence,
+    AugraphyPipeline
 )
 from tqdm import tqdm
 
@@ -25,22 +27,22 @@ no_aug_path = Path('/home/jovyan/shares/SR003.nfs2/kandi_image/T2I_Whatislove/su
 aug_path = Path('/home/jovyan/shares/SR003.nfs2/kandi_image/T2I_Whatislove/sub/aug_data')
 # -------------------------------------------
 
-lcdscreenpattern = LCDScreenPattern(pattern_type="Vertical",
+pipeline = AugraphyPipeline(ink_phase=[AugmentationSequence(
+    [
+    LCDScreenPattern(pattern_type="Vertical",
                                     pattern_value_range = (8,16),
                                     pattern_skip_distance_range = (3,5),
                                     p=0.5
-                                    )
-lighting_gradient_gaussian = LightingGradient(light_position=None,
-                                              direction=90,
-                                              max_brightness=255,
-                                              min_brightness=0,
-                                              mode="gaussian",
-                                              transparency=0.5,
-                                              p=0.5
-
-                                              )
-
-shadowcast = ShadowCast(shadow_side = "bottom",
+                                    ),
+    LightingGradient(light_position=None,
+                                    direction=90,
+                                    max_brightness=255,
+                                    min_brightness=0,
+                                    mode="gaussian",
+                                    transparency=0.5,
+                                    p=0.5
+                                    ),
+    ShadowCast(shadow_side = "bottom",
                         shadow_vertices_range = (2, 3),
                         shadow_width_range=(0.5, 0.8),
                         shadow_height_range=(0.5, 0.8),
@@ -50,21 +52,17 @@ shadowcast = ShadowCast(shadow_side = "bottom",
                         shadow_blur_kernel_range = (200, 301),
                         p = 0.5
                         )
-
-
+    ],
+)])
 def goida_augment(image_path, mask_path, scale, backgrounds_path=BASE/'backgrounds',
                     output_dir=BASE/'augdata', num_augmentations=2):
     os.makedirs(output_dir, exist_ok=True)
     original_name = image_path.name.split('_')[0]
-    if list(output_dir.glob(f'{original_name}*')):
-        return
     image = cv2.imread(image_path)
     mask = cv2.imread(mask_path)
     cv2.imwrite(output_dir/f'{original_name}_aug0.png', image)
     cv2.imwrite(output_dir/f'{original_name}_aug0_mask.png', mask)
-    image = lcdscreenpattern(image)
-    image = lighting_gradient_gaussian(image)
-    image = shadowcast(image)
+    image = pipeline(image)
     backgrounds_names = os.listdir(backgrounds_path)
     random_background = random.choice(backgrounds_names)
     background = cv2.resize(cv2.imread(backgrounds_path/random_background), (2200, 1700))
@@ -139,8 +137,11 @@ def multi_goida_augment(args):
         output_dir=folder,
         num_augmentations=num_augmentations,
         )
-    except:
-        return
+    except Exception as e:
+            print(f"broken shit {image_path.name}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return
 
 def create_augmented_dataset(no_aug_data_path: Path,
                              aug_data_path: Path,
@@ -163,8 +164,6 @@ def create_augmented_dataset(no_aug_data_path: Path,
         
         if image_file.is_file() and mask_file.is_file():
             folder = aug_data_path/('train' if processed_files < int(train_test_ratio * n_total) else 'val')
-            start_index = processed_files
-            
             work.append(
                 (
                     image_file,
